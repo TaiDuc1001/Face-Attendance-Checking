@@ -29,5 +29,5 @@ print(f"Encoded time: {end - start}")
 # Combine student encodes with IDs
 student_encoded_with_ID = [encoded_list, students_ID]
 
-with open("EncodedImages.pickle", "wb") as file:
+with open("pickles/EncodedImages.pickle", "wb") as file:
 	pickle.dump(student_encoded_with_ID, file)
