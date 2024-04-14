@@ -3,9 +3,23 @@ import os
 import cv2
 import time
 import pickle
+import firebase_admin
+from firebase_admin import credentials, storage
+from firebase_admin import db
+
+# Init database and bucket in FireBase
+cred = credentials.Certificate("secret/serviceAccountKey.json")
+firebase_admin.initialize_app(
+	cred,
+	{
+		"databaseURL": "https://face-identification-real-time-default-rtdb.firebaseio.com/",
+		"storageBucket": "face-identification-real-time.appspot.com"
+	}
+)
 
 folder_path = 'Images'
 images_path = os.listdir(folder_path)
+
 
 images_list = []
 students_ID = []
