@@ -24,8 +24,14 @@ images_path = os.listdir(folder_path)
 images_list = []
 students_ID = []
 for path in images_path:
-	images_list.append(cv2.imread(os.path.join(folder_path, path)))
-	students_ID.append(os.path.splitext(path)[0])
+	file_name = f"{folder_path}/{path}" # Get file name
+	images_list.append(cv2.imread(file_name)) # Append to list
+	students_ID.append(os.path.splitext(path)[0]) # Extract student ID and append to list
+
+	# Instantiate bucket and upload with blob
+	bucket = storage.bucket()
+	blob = bucket.blob(file_name)
+	blob.upload_from_filename(file_name)
 
 encoded_list = []
 
