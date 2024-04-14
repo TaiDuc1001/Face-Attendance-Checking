@@ -25,6 +25,39 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREY = (100, 100, 100)
 
+# Coordinates constant
+CAMERA_DISPLAY_Y = 162
+CAMERA_DISPLAY_X = 55
+MODE_DISPLAY_Y = 44
+MODE_DISPLAY_X = 808
+STUDENT_IMAGE_DISPLAY_Y = 175
+STUDENT_IMAGE_DISPLAY_X = 909
+TOTAL_ATTENDANCE_DISPLAY = (861, 125)
+MAJOR_DISPLAY = (1006, 550)
+STUDENT_ID_DISPLAY = (1006, 493)
+STANDING_DISPLAY = (910, 625)
+YEAR_DISPLAY = (1025, 625)
+STARTING_YEAR = (1125, 625)
+NAME_DISPLAY_Y = 808
+NAME_DISPLAY_X = 445
+
+# Object dimension (height & width) constant
+CAMERA_HEIGHT = 480
+CAMERA_WIDTH = 640
+MODE_HEIGHT = 633
+MODE_WIDTH = 414
+STUDENT_IMAGE_HEIGHT = 216
+STUDENT_IMAGE_WIDTH = 216
+
+# Configuration constants
+TOTAL_ATTENDANCE_FONTSIZE = 1
+MAJOR_FONTSIZE = 0.5
+STUDENT_ID_FONTSIZE = 0.5
+STANDING_FONTSIZE = 0.6
+YEAR_FONTSIZE = 0.6
+STARTING_YEAR_FONTSIZE = 0.6
+NAME_FONTSIZE = 1
+
 cap = cv2.VideoCapture('http://192.168.1.5:4747/video')
 background = cv2.imread("Resources/background.png") # Read background
 
@@ -52,9 +85,10 @@ while True:
     imgS = cv2.resize(img, (0, 0), fx=0.25, fy=0.25)
     imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
 
-    background[162:162+480, 55:55+640] = img  # Place camera in background
-    background[44:44+633, 808:808+414] = img_mode_list[mode_type] # Place mode in background
-
+    # Place camera in background
+    background[CAMERA_DISPLAY_Y:CAMERA_DISPLAY_Y + CAMERA_HEIGHT, CAMERA_DISPLAY_X:CAMERA_DISPLAY_X + CAMERA_WIDTH] = img
+    background[MODE_DISPLAY_Y:MODE_DISPLAY_Y + MODE_HEIGHT, MODE_DISPLAY_X:MODE_DISPLAY_X + MODE_WIDTH] = img_mode_list[mode_type]
+    
     # Detecting face
     face_current_frame = face_recognition.face_locations(imgS)
     encoded_current_frame = face_recognition.face_encodings(imgS, face_current_frame)
@@ -68,7 +102,12 @@ while True:
 
             if matches[match_index]:
                 y1, x2, y2, x1 = face_location
-                x1, x2, y1, y2 = x1*4+55, x2*4+55, y1*4+162, y2*4 + 162
+
+                x1 = x1 * 4 + CAMERA_DISPLAY_X
+                x2 = x2 * 4 + CAMERA_DISPLAY_X
+                y1= y1 * 4 + CAMERA_DISPLAY_Y
+                y2 = y2 * 4 + CAMERA_DISPLAY_Y
+
                 p1, p2 = (x1, y1), (x2, y2)
                 background = cv2.rectangle(background, p1, p2, GREEN, 2)
                 student_id = student_IDs[match_index]
@@ -103,47 +142,40 @@ while True:
                 else:
                     mode_type = 3
                     counter = 0
-                    background[44:44+633, 808:808+414] = img_mode_list[mode_type] # Place mode in background
+                    background[MODE_DISPLAY_Y:MODE_DISPLAY_Y + MODE_HEIGHT, MODE_DISPLAY_X:MODE_DISPLAY_X + MODE_WIDTH] = img_mode_list[mode_type]
 
             if mode_type != 3:       
                 if 10 < counter < 20:
                     mode_type = 2
                 
-                background[44:44+633, 808:808+414] = img_mode_list[mode_type] # Place mode in background
+                background[MODE_DISPLAY_Y:MODE_DISPLAY_Y + MODE_HEIGHT, MODE_DISPLAY_X:MODE_DISPLAY_X + MODE_WIDTH] = img_mode_list[mode_type]
 
                 if counter <= 10:
                     # Display student image
-                    background[175:175+216, 909:909+216] = student_image
+                    background[STUDENT_IMAGE_DISPLAY_Y:STUDENT_IMAGE_DISPLAY_Y + STUDENT_IMAGE_HEIGHT, STUDENT_IMAGE_DISPLAY_X:STUDENT_IMAGE_DISPLAY_X + STUDENT_IMAGE_WIDTH] = student_image
 
                     # Display total_attendance text
-                    cv2.putText(background, str(student_info["total_attendance"]), (861, 125),
-                                cv2.FONT_HERSHEY_COMPLEX, 1, WHITE, 1)
+                    cv2.putText(background, str(student_info["total_attendance"]), TOTAL_ATTENDANCE_DISPLAY, cv2.FONT_HERSHEY_COMPLEX, TOTAL_ATTENDANCE_FONTSIZE, WHITE, 1)
                     
                     # Display major text
-                    cv2.putText(background, str(student_info["major"]), (1006, 550),
-                                cv2.FONT_HERSHEY_COMPLEX, 0.5, WHITE, 1)
+                    cv2.putText(background, str(student_info["major"]), MAJOR_DISPLAY, cv2.FONT_HERSHEY_COMPLEX, MAJOR_FONTSIZE, WHITE, 1)
                     
                     # Display id text
-                    cv2.putText(background, str(student_id), (1006, 493),
-                                cv2.FONT_HERSHEY_COMPLEX, 0.5, WHITE, 1)
+                    cv2.putText(background, str(student_id), STUDENT_ID_DISPLAY, cv2.FONT_HERSHEY_COMPLEX, STUDENT_ID_FONTSIZE, WHITE, 1)
                     
                     # Display standing text
-                    cv2.putText(background, str(student_info["standing"]), (910, 625),
-                                cv2.FONT_HERSHEY_COMPLEX, 0.6, BLACK, 1)
+                    cv2.putText(background, str(student_info["standing"]), STANDING_DISPLAY, cv2.FONT_HERSHEY_COMPLEX, STANDING_FONTSIZE, BLACK, 1)
                     
                     # Display year text
-                    cv2.putText(background, str(student_info["year"]), (1025, 625),
-                                cv2.FONT_HERSHEY_COMPLEX, 0.6, BLACK, 1)
+                    cv2.putText(background, str(student_info["year"]), YEAR_DISPLAY, cv2.FONT_HERSHEY_COMPLEX, YEAR_FONTSIZE, BLACK, 1)
                     
                     # Display starting_year text
-                    cv2.putText(background, str(student_info["starting_year"]), (1125, 625),
-                                cv2.FONT_HERSHEY_COMPLEX, 0.6, BLACK, 1)
+                    cv2.putText(background, str(student_info["starting_year"]), STARTING_YEAR, cv2.FONT_HERSHEY_COMPLEX, STARTING_YEAR_FONTSIZE, BLACK, 1)
                     
                     # Display name text
                     (w, h), _ = cv2.getTextSize(student_info["name"], cv2.FONT_HERSHEY_COMPLEX, 1, 1)
-                    offset = (414 - w) // 2
-                    cv2.putText(background, str(student_info["name"]), (808 + offset, 445),
-                                cv2.FONT_HERSHEY_COMPLEX, 1, BLACK, 1)
+                    offset = (MODE_WIDTH - w) // 2
+                    cv2.putText(background, str(student_info["name"]), (NAME_DISPLAY_Y + offset, NAME_DISPLAY_X), cv2.FONT_HERSHEY_COMPLEX, NAME_FONTSIZE, BLACK, 1)
             
                 counter += 1
 
@@ -152,7 +184,7 @@ while True:
                     mode_type = 0
                     student_info = []
                     student_image = []
-                    background[44:44+633, 808:808+414] = img_mode_list[mode_type]
+                    background[MODE_DISPLAY_Y:MODE_DISPLAY_Y + MODE_HEIGHT, MODE_DISPLAY_X:MODE_DISPLAY_X + MODE_WIDTH] = img_mode_list[mode_type]
     else:
         mode_type = 0
         counter = 0
