@@ -1,28 +1,30 @@
-# Face Identification Project
+# Real-Time Face Identification Project
 
-This project is a face identification system that uses computer vision techniques to identify faces in images.
+This project is a real-time face identification system that uses computer vision techniques to identify faces from a live camera feed.
 
 ## Project Structure
 
-- `draw_boxes_from_annotations.py`: This script reads face annotations from a pickle file and draws bounding boxes around the faces in the images.
-- `encoder.py`: This script encodes the images for the face identification system.
-- `main.py`: This is the main script that runs the face identification system.
-- `process_annotation.py`: This script processes the annotation files and saves them as pickle files for later use.
-- `pickles/`: This directory contains the pickle files for the encoded images and the annotations.
-- `WIDER_train/`: This directory contains the training images for the face identification system.
+- `detect_on_camera.py`: This script captures video from a camera, detects faces in the video, and identifies the faces using encoded images.
+- `encoder.py`: This script encodes the images for the face identification system and uploads them to Firebase.
+- `main.py`: This is the main script that captures a frame from the camera, identifies faces in the frame, and prints the results.
+- `pickles/`: This directory contains the pickle files for the encoded images.
+- `secret/`: This directory contains sensitive information such as Firebase service account key and DroidCam IP.
+- `Images/`: This directory contains the images of students to be identified.
 
 ## How to Run
 
-1. Run `process_annotation.py` to process the annotation files and save them as pickle files.
-2. Run `encoder.py` to encode the images for the face identification system.
-3. Run `main.py` to start the face identification system.
+1. Run `encoder.py` to encode the images for the face identification system and upload them to Firebase.
+2. Run `main.py` to start the face identification system.
 
 ## Dependencies
 
 - OpenCV
 - Pickle
 - os
-- random
+- time
+- numpy
+- face_recognition
+- firebase_admin
 
 ## Contributing
 
