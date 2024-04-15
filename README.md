@@ -12,9 +12,10 @@ This project is a real-time face identification system that uses computer vision
 - `Images/`: This directory contains the images of students to be identified.
 
 ## How to Run
-
-1. Run `encoder.py` to encode the images for the face identification system and upload them to Firebase.
-2. Run `main.py` to start the face identification system.
+1. If there are new students, put their images on `Images/` folder.
+2. Manually add their information on `info.csv`.
+3. Run `encoder.py` to encode the images for the face identification system and upload them to Firebase.
+4. Run `main.py` to start the face identification system.
 
 ## Dependencies
 
