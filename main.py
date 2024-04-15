@@ -71,11 +71,14 @@ if face_locations:
         match_index = np.argmin(face_distances)
 
         if matches[match_index]:
-            # Extract face coordinates
+            student_id = student_IDs[match_index]
+            student_info = db.reference(f"Students/{student_id}").get()
+            ref = db.reference(f"Students/{student_id}")
+            student_info["total_attendance"] += 1
+            ref.child("total_attendance").set(student_info["total_attendance"])
+            print(f"Found {student_info['name']}.")
             top, right, bottom, left = face_location
-
-            # Draw a rectangle around the face
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            frame = cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
 # Display the processed frame for 10 seconds or until 'q' key is pressed
 cv2.imshow('Processed Frame', frame)
