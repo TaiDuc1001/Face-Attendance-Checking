@@ -1,7 +1,10 @@
 .vscode
 WIDER_train
-secret
-pickles
+secret/droidcam_ip.txt
+secret/serviceAccountKey.json
+pickles/EncodedImages.pickle
+pickles/train_annotations.pickle
+pickles/val_annotations.pickle
 captured_image.jpg
 annotations
 Resources
