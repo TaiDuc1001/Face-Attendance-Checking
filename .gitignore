@@ -3,3 +3,8 @@ WIDER_train
 secret
 pickles
 captured_image.jpg
+annotations
+Resources
+Students_In_Class_For_Testing
+process_annotation.py
+draw_boxes_from_annotations.py
