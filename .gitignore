@@ -5,9 +5,11 @@ secret/serviceAccountKey.json
 pickles/EncodedImages.pickle
 pickles/train_annotations.pickle
 pickles/val_annotations.pickle
-captured_image.jpg
 annotations
 Resources
 Students_In_Class_For_Testing
+
+captured_image.jpg
 process_annotation.py
 draw_boxes_from_annotations.py
+detect_on_camera.py
