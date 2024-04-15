@@ -4,29 +4,24 @@ This project is a real-time face identification system that uses computer vision
 
 ## Project Structure
 
-- `detect_on_camera.py`: This script captures video from a camera, detects faces in the video, and identifies the faces using encoded images.
 - `encoder.py`: This script encodes the images for the face identification system and uploads them to Firebase.
 - `main.py`: This is the main script that captures a frame from the camera, identifies faces in the frame, and prints the results.
-- `pickles/`: This directory contains the pickle files for the encoded images.
-- `secret/`: This directory contains sensitive information such as Firebase service account key and DroidCam IP.
 - `Images/`: This directory contains the images of students to be identified.
 
 ## How to Run
-1. If there are new students, put their images on `Images/` folder.
+If there is new student:
+1. Put their images on `Images/` folder.
 2. Manually add their information on `info.csv`.
 3. Run `encoder.py` to encode the images for the face identification system and upload them to Firebase.
-4. Run `main.py` to start the face identification system.
+4. Run `main.py` to start the face identification system. 
+   
+If not:
+1. Run `main.py` to detect faces, the `total_attendance` on firebase will automatically update.
+2. If you want to download all data on firebase, change `FIREBASE_TO_CSV` in `upload_data_to_database.py` to True and run that file (it will update your csv file). 
 
 ## Dependencies
+Run `pip install ./requirements.txt`
 
-- OpenCV
-- Pickle
-- os
-- time
-- numpy
-- face_recognition
-- firebase_admin
+## License
 
-## Contributing
-
-Contributions are welcome. Please open an issue or submit a pull request.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
