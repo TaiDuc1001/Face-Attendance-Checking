@@ -1,3 +1,5 @@
+import csv
+import json
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
@@ -12,38 +14,17 @@ firebase_admin.initialize_app(
 
 ref = db.reference("Students")
 
-data = {
-	"321654":
-		{
-			"name": "Phan Tai Duc",
-			"major": "AI",
-			"starting_year": 2023,
-			"total_attendance": 6,
-			"standing": "G",
-			"year": 4,
-			"last_attendance_time": "2024-04-14 12:54:34"
-		},
-	"852741":
-		{
-			"name": "Emily Blunt",
-			"major": "Economics",
-			"starting_year": 2022,
-			"total_attendance": 5,
-			"standing": "G",
-			"year": 3,
-			"last_attendance_time": "2024-04-14 12:54:34"
-		},
-	"963852":
-		{
-			"name": "Elon Musk",
-			"major": "Physics",
-			"starting_year": 2023,
-			"total_attendance": 6,
-			"standing": "G",
-			"year": 4,
-			"last_attendance_time": "2024-04-14 12:54:34"
-		},
-}
+# Open the CSV file
+with open('info.csv', mode='r') as csv_file:
+    data = {}
+
+    csv_reader = csv.DictReader(csv_file)
+    for row in csv_reader:
+        row['starting_year'] = int(row['starting_year'])
+        row['total_attendance'] = int(row['total_attendance'])
+        row['year'] = int(row['year'])
+        data[row['id']] = row
+
 
 for key, value in data.items():
 	ref.child(key).set(value)
