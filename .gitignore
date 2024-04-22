@@ -1,21 +1,12 @@
+.env
 .vscode
 __pycache__
-WIDER_train
-secret/droidcam_ip.txt
-secret/serviceAccountKey.json
-pickles/EncodedImages.pickle
-pickles/train_annotations.pickle
-pickles/val_annotations.pickle
-annotations
-Resources
-Students_In_Class_For_Testing
+extracted-faces
+lfw-deepfunneled
+storage
+stage
+test
 
 captured_image.jpg
-process_annotation.py
-draw_boxes_from_annotations.py
-detect_on_camera.py
 
-lfw-deepfunneled
 data.pt
-fake-dataset
-stage
