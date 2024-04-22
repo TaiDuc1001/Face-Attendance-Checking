@@ -4,7 +4,7 @@ This project is to detect faces, then compare with database to check whether a s
 
 ## Project Structure
 
-- `encoder.py`: This script encodes the images from `storage/` folder or new students in `stage/` for the face identification system.
+- `encoder.py`: This script encodes the images from `storage/` folder or new students in `stage/` for the face identification system. Also while embed features, upload images to firebase storage.
 - `face_detector.py`: This file extract faces from target picture and save them in `extracted-faces/` folder that will be used by `main.py`.
 - `main.py`: This is the main script that take faces from `extracted-faces` then compare with old students in `data.pt`.
 - `helper.py`: This one contains timing decorator to get time executed of target functions.
