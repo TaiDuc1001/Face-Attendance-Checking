@@ -42,5 +42,5 @@ for image_file in image_files:
     if person is not None:
         print(f"Image {image_file}:\tPerson: {person}\tSimilarity: {difference:.4f}\n")
     else:
-        print(f"Image {image_file}: no face detected.")
+        print(f"Image {image_file}: no face detected.\n")
     
