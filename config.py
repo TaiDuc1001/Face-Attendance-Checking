@@ -6,4 +6,4 @@ DATA_PATH = "data.pt"
 TEST_IMAGES_PATH = "test"
 
 # Constants
-THRESHOLD = 0.7
+THRESHOLD = 0.72
