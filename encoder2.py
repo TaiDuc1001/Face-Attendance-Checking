@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 isNew = args.isNew
 
-mtcnn = MTCNN(image_size=216)
+mtcnn = MTCNN()
 resnet = InceptionResnetV1(pretrained="vggface2").eval()
 
 
@@ -81,6 +81,6 @@ def moving():
         shutil.move(source_path, destination_path)
         print(f"Moved {source_path} => {destination_path}")
 
+save_data()
 if isNew:
-    save_data()
     moving()
