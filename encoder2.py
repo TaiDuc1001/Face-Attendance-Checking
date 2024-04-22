@@ -3,6 +3,7 @@ import torch
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from helper import timing
+from config import DATASET_PATH, DATA_PATH, STAGE_PATH
 import argparse
 import shutil
 import os
@@ -16,9 +17,6 @@ isNew = args.isNew
 mtcnn = MTCNN(image_size=216)
 resnet = InceptionResnetV1(pretrained="vggface2").eval()
 
-STAGE_PATH = "stage"
-DATASET_PATH = "fake-dataset"
-DATA_PATH = "data.pt"
 
 if isNew:
     old_data = torch.load(DATA_PATH)
@@ -75,7 +73,7 @@ def moving():
     f"""
     Move folders from {STAGE_PATH} to {DATASET_PATH} after embed new students in {STAGE_PATH}
     """
-    
+
     new_folders = os.listdir(STAGE_PATH)
     new_folders_path = [STAGE_PATH + "/" + folder for folder in new_folders]
     destination_path = DATASET_PATH
