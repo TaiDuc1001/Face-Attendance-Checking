@@ -1,6 +1,6 @@
-# Real-Time Face Identification Project
+# Face Identification Project
 
-This project is a real-time face identification system that uses computer vision techniques to identify faces from a live camera feed.
+This project is to detect faces, then compare with database to check whether a student is present or not. Using inception resnet v1 from `facenet-pytorch` library and `MTCNN` to extract faces from picture.
 
 ## Project Structure
 
