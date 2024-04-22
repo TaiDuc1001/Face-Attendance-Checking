@@ -14,8 +14,13 @@ image = cv2.imread(image_path)
 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 boxes, probs = mtcnn.detect(image_rgb)
 
+# In case someone else pull this project
+if not os.path.exists(EXTRACTED_FACES_PATH):
+    os.mkdir(EXTRACTED_FACES_PATH)
+
 shutil.rmtree(EXTRACTED_FACES_PATH, ignore_errors=True)
-os.makedirs(EXTRACTED_FACES_PATH, exist_ok=True)
+if not os.path.exists(EXTRACTED_FACES_PATH):
+    os.mkdir(EXTRACTED_FACES_PATH)
 
 if boxes is not None:
     for i, (box, prob) in enumerate(zip(boxes, probs)):
