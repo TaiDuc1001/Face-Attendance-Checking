@@ -13,3 +13,5 @@ captured_image.jpg
 process_annotation.py
 draw_boxes_from_annotations.py
 detect_on_camera.py
+
+lfw-deepfunneled
