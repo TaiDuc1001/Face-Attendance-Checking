@@ -3,7 +3,7 @@
 __pycache__
 extracted-faces
 lfw-deepfunneled
-storage
+database
 stage
 test
 models

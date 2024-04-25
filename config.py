@@ -1,6 +1,6 @@
 # Paths
 STAGE_PATH = "stage"
-DATASET_PATH = "storage"
+DATASET_PATH = "database"
 EXTRACTED_FACES_PATH = "extracted-faces"
 RESNET_DATA_PATH = "resnet-data.pt"
 VGG_DATA_PATH = "vgg16-data.pt"
