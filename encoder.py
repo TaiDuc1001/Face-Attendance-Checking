@@ -1,6 +1,6 @@
 from facenet_pytorch import MTCNN, InceptionResnetV1
 import firebase_admin
-from firebase_admin import credentials, storage
+# from firebase_admin import credentials, storage
 from dotenv import load_dotenv 
 import torch
 from torchvision import datasets
@@ -20,17 +20,16 @@ args = parser.parse_args()
 isNew = args.isNew
 
 # === Load .env ===
-load_dotenv()
-service_json = os.getenv("FIREBASE_KEY")
-service_key = json.loads(service_json)
-cred = credentials.Certificate(service_key)
-firebase_admin.initialize_app(
-	cred,
-	{
-		"databaseURL": "https://face-identification-real-time-default-rtdb.firebaseio.com/",
-		"storageBucket": "face-identification-real-time.appspot.com"
-	}
-)
+# load_dotenv()
+# service_json = os.getenv("FIREBASE_API_KEY")
+# service_key = json.loads(service_json)
+# cred = credentials.Certificate(service_key)
+# firebase_admin.initialize_app(
+# 	cred,
+# 	{
+# 		"storageBucket": "face-identification-real-time.appspot.com"
+# 	}
+# )
 
 # === MTCNN and RESNET ===
 mtcnn = MTCNN()
@@ -59,8 +58,8 @@ def get_embed_data_and_upload_images(isNew):
         image_path = f"{dataset_path}/{subfolder}"
         path.append(image_path)
 
-    i=0
-    num_images = len(os.listdir(path[0]))
+    # i=0
+    # num_images = len(os.listdir(path[0]))
     embeddings_dict = {}
     for img, idx in loader:
         face, prob = mtcnn(img, return_prob=True)
@@ -71,15 +70,15 @@ def get_embed_data_and_upload_images(isNew):
             else:
                 embeddings_dict[idx].append(embeddings)
         
-        if i == num_images:
-            i = 0
-        i += 1
-        filename = f"{path[idx]}/{i}.jpg"
-        bucket = storage.bucket()
-        blob = bucket.blob(filename)
-        blob.upload_from_filename(filename)
-        print(f"Uploaded {filename}")
-        num_images = len(os.listdir(path[idx]))
+        # if i == num_images:
+        #     i = 0
+        # i += 1
+        # filename = f"{path[idx]}/{i}.jpg"
+        # bucket = storage.bucket()
+        # blob = bucket.blob(filename)
+        # blob.upload_from_filename(filename)
+        # print(f"Uploaded {filename}")
+        # num_images = len(os.listdir(path[idx]))
 
     embedding_list = []
     name_list = []
