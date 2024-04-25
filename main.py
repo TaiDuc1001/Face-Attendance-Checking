@@ -40,7 +40,7 @@ for image_file in image_files:
     image_path = os.path.join(EXTRACTED_FACES_PATH, image_file)
     person, difference, _ = face_match(image_path=image_path, data_path=DATA_PATH)
     if person is not None:
-        print(f"Image {image_file}:\tPerson: {person}\tSimilarity: {difference:.4f}\n")
+        print(f"Image {image_file} --- Person: {person} --- Similarity: {difference:.4f}\n")
     else:
         print(f"Image {image_file}: no face detected.\n")
     
