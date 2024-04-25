@@ -1,15 +1,26 @@
-import cv2
 from facenet_pytorch import MTCNN, InceptionResnetV1
+
+import argparse
+import cv2
 import shutil
 import os
 from config import TEST_IMAGES_PATH, EXTRACTED_FACES_PATH
-import numpy as np
 
 mtcnn = MTCNN()
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
 
+# === ArgParse ===
+parser = argparse.ArgumentParser(description="Extract faces from an image.")
+parser.add_argument("-f", "--file", type=str, help="File name in TEST_IMAGES_PATH folder")
+args = parser.parse_args()
 
-image_path = f'{TEST_IMAGES_PATH}/1.jpg'
+if args.file:
+    file_name = args.file
+    image_path = os.path.join(TEST_IMAGES_PATH, file_name)
+else:
+    image_path = os.path.join(TEST_IMAGES_PATH, "1.jpg")
+
+# === Read image ===
 image = cv2.imread(image_path)
 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 boxes, probs = mtcnn.detect(image_rgb)
@@ -24,6 +35,7 @@ if not os.path.exists(EXTRACTED_FACES_PATH):
 
 if boxes is not None:
     for i, (box, prob) in enumerate(zip(boxes, probs)):
+        i += 1
         if prob >= 0.9:
             x1, y1, x2, y2 = map(int, box)
             x1, y1 = max(x1, 0), max(y1, 0)
@@ -35,5 +47,5 @@ if boxes is not None:
             key = cv2.waitKey(5000) & 0xFF
             if key == ord('q'):
                 continue
-
+print(f"Detected {i} faces. Saved in {EXTRACTED_FACES_PATH}.")
 cv2.destroyAllWindows()
