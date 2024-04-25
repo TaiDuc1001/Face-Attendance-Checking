@@ -29,27 +29,22 @@ vgg_model.eval().to(device)
 # === Load old embeddings ===
 if isNew:
     old_data_vgg = torch.load(VGG_DATA_PATH)
-    old_embedding_list_vgg, old_name_list = old_data_vgg
+    old_embedding_list_vgg, old_name_list_vgg = old_data_vgg
     old_data_resnet = torch.load(RESNET_DATA_PATH)
-    old_embedding_list_resnet, old_name_list = old_data_resnet
+    old_embedding_list_resnet, old_name_list_resnet = old_data_resnet
 else:
     old_embedding_list_vgg = []
+    old_name_list_vgg = []
     old_embedding_list_resnet = []
-    old_name_list = []
+    old_name_list_resnet = []
 
 
 @timing
 def get_embed_data(isNew, model):
-    if model == 'vgg':
-        dataset_path = STAGE_PATH if isNew else DATASET_PATH
-        dataset = datasets.ImageFolder(dataset_path)
-        idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
-        model = vgg_model
-    elif model == 'resnet':
-        dataset_path = STAGE_PATH if isNew else DATASET_PATH
-        dataset = datasets.ImageFolder(dataset_path)
-        idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
-        model = resnet
+    dataset_path = STAGE_PATH if isNew else DATASET_PATH
+    dataset = datasets.ImageFolder(dataset_path)
+    idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
+    model = resnet if model == "resnet" else vgg_model
 
     def collate_func(batch):
         faces = []
@@ -101,20 +96,21 @@ def get_embed_data(isNew, model):
 
     return embedding_list, name_list
 
-embedding_list_resnet, name_list = get_embed_data(isNew, 'resnet')
-embedding_list_vgg, name_list = get_embed_data(isNew, 'vgg')
+embedding_list_resnet, name_list_resnet = get_embed_data(isNew, 'resnet')
+embedding_list_vgg, name_list_vgg = get_embed_data(isNew, 'vgg')
 
 if isNew:
     old_embedding_list_vgg.extend(embedding_list_vgg)
-    old_name_list.extend(name_list)
-    embedding_list_vgg, name_list = old_embedding_list_vgg, old_name_list
+    old_name_list_vgg.extend(name_list_vgg)
+    embedding_list_vgg, name_list_vgg = old_embedding_list_vgg, old_name_list_vgg
+
     old_embedding_list_resnet.extend(embedding_list_resnet)
-    embedding_list_resnet, name_list = old_embedding_list_resnet, old_name_list
+    old_name_list_resnet.extend(name_list_resnet)
+    embedding_list_resnet, name_list_resnet = old_embedding_list_resnet, old_name_list_resnet
 
-data_vgg = [embedding_list_vgg, name_list]
-data_resnet = [embedding_list_resnet, name_list]
+data_vgg = [embedding_list_vgg, name_list_vgg]
+data_resnet = [embedding_list_resnet, name_list_resnet]
 
-print(f"New name_list: {name_list}")
 
 def save_data(model):
     if model == 'vgg':
@@ -139,7 +135,7 @@ def moving():
         shutil.move(source_path, destination_path)
         print(f"Moved {source_path} => {destination_path}")
 
-save_data('vgg')
 save_data('resnet')
+save_data('vgg')
 if isNew:
     moving()
