@@ -6,7 +6,7 @@ lfw-deepfunneled
 storage
 stage
 test
+models
 
-captured_image.jpg
-
-data.pt
+resnet-data.pt
+vgg16-data.pt
