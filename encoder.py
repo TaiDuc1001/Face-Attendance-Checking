@@ -1,4 +1,6 @@
 from facenet_pytorch import MTCNN, InceptionResnetV1
+
+from threading import Thread
 from dotenv import load_dotenv 
 import torch
 from torchvision import datasets
@@ -8,20 +10,21 @@ from config import DATASET_PATH, DATA_PATH, STAGE_PATH
 import argparse
 import shutil
 import os
-import json
 
 # === ArgParse ===
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--isNew', action='store_true', help='Whether to process new data')
 args = parser.parse_args()
-
 isNew = args.isNew
 
+# === Configuration ===
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 # === MTCNN and RESNET ===
-mtcnn = MTCNN()
-resnet = InceptionResnetV1(pretrained="vggface2").eval()
+mtcnn = MTCNN(device=device)
+resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
 
-
+# === Load old embeddings ===
 if isNew:
     old_data = torch.load(DATA_PATH)
     old_embedding_list, old_name_list = old_data
@@ -30,26 +33,45 @@ else:
     old_name_list = []
 
 @timing
-def get_embed_data_and_upload_images(isNew):
+def get_embed_data(isNew):
     dataset_path = STAGE_PATH if isNew else DATASET_PATH
     dataset = datasets.ImageFolder(dataset_path)
     idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
 
-    def collate_func(x):
-        return x[0]
+    def collate_func(batch):
+        faces = []
+        indices = []
+        threads = []
 
-    loader = DataLoader(dataset, collate_fn=collate_func)
+        def process_image(img, idx):
+            face, prob = mtcnn(img, return_prob=True)
+            if face is not None and prob >= 0.9:
+                faces.append(face)
+                indices.append(idx)
+
+        for img, idx in batch:
+            thread = Thread(target=process_image, args=(img, idx))
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+        return faces, indices
+
+    loader = DataLoader(dataset, batch_size=32, collate_fn=collate_func)
 
     embeddings_dict = {}
-    for img, idx in loader:
-        face, prob = mtcnn(img, return_prob=True)
-        if face is not None and prob >= 0.9:
-            embeddings = resnet(face.unsqueeze(0)).detach()
+    for batch_faces, batch_indices in loader:
+        # Move faces to device before processing
+        faces = [face.unsqueeze(0).to(device) for face in batch_faces]
+        with torch.no_grad():
+            embeddings = resnet(torch.cat(faces)).cpu()
+        for idx, emb in zip(batch_indices, embeddings):
             if idx not in embeddings_dict:
-                embeddings_dict[idx] = [embeddings]
+                embeddings_dict[idx] = [emb]
             else:
-                embeddings_dict[idx].append(embeddings)
-
+                embeddings_dict[idx].append(emb)
+                
     embedding_list = []
     name_list = []
     for idx, embeddings_list in embeddings_dict.items():
@@ -59,7 +81,7 @@ def get_embed_data_and_upload_images(isNew):
 
     return embedding_list, name_list
     
-embedding_list, name_list = get_embed_data_and_upload_images(isNew)
+embedding_list, name_list = get_embed_data(isNew)
 if isNew:
     old_embedding_list.extend(embedding_list)
     old_name_list.extend(name_list)
