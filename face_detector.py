@@ -33,10 +33,12 @@ shutil.rmtree(EXTRACTED_FACES_PATH, ignore_errors=True)
 if not os.path.exists(EXTRACTED_FACES_PATH):
     os.mkdir(EXTRACTED_FACES_PATH)
 
+face_counted = 0
 if boxes is not None:
     for i, (box, prob) in enumerate(zip(boxes, probs)):
         i += 1
         if prob >= 0.9:
+            face_counted += 1
             x1, y1, x2, y2 = map(int, box)
             x1, y1 = max(x1, 0), max(y1, 0)
             x2, y2 = min(x2, image.shape[1]), min(y2, image.shape[0])
@@ -47,5 +49,5 @@ if boxes is not None:
             key = cv2.waitKey(5000) & 0xFF
             if key == ord('q'):
                 continue
-print(f"Detected {i} faces. Saved in {EXTRACTED_FACES_PATH}.")
+print(f"Detected {face_counted} faces. Saved in {EXTRACTED_FACES_PATH}.")
 cv2.destroyAllWindows()
