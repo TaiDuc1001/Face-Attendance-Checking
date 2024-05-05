@@ -1,13 +1,6 @@
 import os
 
 def rename_files(start_index=1, directory=".", printout=False):
-    """
-    Renames files in a directory and its subdirectories with sequential indices.
-
-    Args:
-        start_index: The starting index for renaming (default: 1).
-        directory: The directory to start searching from (default: current directory).
-    """
     for root, _, files in os.walk(directory):
         for i, filename in enumerate(files):
             new_name = f"{start_index + i}.jpg"
