@@ -1,8 +1,5 @@
 import os
 
-
-
-
 def rename_files(start_index=1, directory=".", printout=False):
     """
     Renames files in a directory and its subdirectories with sequential indices.
