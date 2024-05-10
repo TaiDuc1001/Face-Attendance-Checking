@@ -26,17 +26,16 @@ vgg_model = vgg16(pretrained=False)
 vgg_model.load_state_dict(torch.load(VGG_WEIGHTS_PATH))
 vgg_model.eval().to(device)
 
-# === Load old embeddings ===
-if isNew:
-    old_data_vgg = torch.load(VGG_DATA_PATH)
-    old_embedding_list_vgg, old_name_list_vgg = old_data_vgg
-    old_data_resnet = torch.load(RESNET_DATA_PATH)
-    old_embedding_list_resnet, old_name_list_resnet = old_data_resnet
-else:
-    old_embedding_list_vgg = []
-    old_name_list_vgg = []
-    old_embedding_list_resnet = []
-    old_name_list_resnet = []
+# === Load available embeddings ===
+@timing
+def load_available_data(data_path, isNew):
+    if isNew:
+        old_data = torch.load(data_path)
+        old_embedding_list, old_name_list = old_data
+    else:
+        old_embedding_list = []
+        old_name_list = []
+    return old_embedding_list, old_name_list
 
 
 @timing
@@ -96,31 +95,19 @@ def get_embed_data(isNew, model):
 
     return embedding_list, name_list
 
-embedding_list_resnet, name_list_resnet = get_embed_data(isNew, 'resnet')
-embedding_list_vgg, name_list_vgg = get_embed_data(isNew, 'vgg')
+@timing
+def save(model_name, data_path, isNew=isNew):
+    old_embedding_list, old_name_list = load_available_data(data_path, isNew)
+    embedding_list, name_list = get_embed_data(isNew, model_name)
 
-if isNew:
-    old_embedding_list_vgg.extend(embedding_list_vgg)
-    old_name_list_vgg.extend(name_list_vgg)
-    embedding_list_vgg, name_list_vgg = old_embedding_list_vgg, old_name_list_vgg
-
-    old_embedding_list_resnet.extend(embedding_list_resnet)
-    old_name_list_resnet.extend(name_list_resnet)
-    embedding_list_resnet, name_list_resnet = old_embedding_list_resnet, old_name_list_resnet
-
-data_vgg = [embedding_list_vgg, name_list_vgg]
-data_resnet = [embedding_list_resnet, name_list_resnet]
-
-
-def save_data(model):
-    if model == 'vgg':
-        data = data_vgg
-        print(f"Save {VGG_DATA_PATH}.")
-        torch.save(data, VGG_DATA_PATH)
-    elif model == 'resnet':
-        data = data_resnet
-        print(f"Save {RESNET_DATA_PATH}.")
-        torch.save(data, RESNET_DATA_PATH)
+    if isNew:
+        old_embedding_list.extend(embedding_list)
+        old_name_list.extend(name_list)
+        embedding_list, name_list = old_embedding_list, old_name_list
+        
+    data = [embedding_list, name_list]
+    print(f"Save {data_path}.")
+    torch.save(data, data_path)
 
 @timing
 def moving():
@@ -135,7 +122,7 @@ def moving():
         shutil.move(source_path, destination_path)
         print(f"Moved {source_path} => {destination_path}")
 
-save_data('resnet')
-save_data('vgg')
+save('resnet', RESNET_DATA_PATH)
+save('vgg', VGG_DATA_PATH)
 if isNew:
     moving()
