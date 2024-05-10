@@ -1,6 +1,5 @@
 import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1
-from torchvision.models import vgg16
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from threading import Thread
@@ -19,12 +18,22 @@ isNew = args.isNew
 # === Configuration ===
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# === MTCNN and RESNET ===
+# === Initialize models ===
 mtcnn = MTCNN()
 resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
-vgg_model = vgg16(pretrained=False)
-vgg_model.load_state_dict(torch.load(VGG_WEIGHTS_PATH))
-vgg_model.eval().to(device)
+
+
+# Models dict
+model_dict = {
+    "resnet": {
+        "model": resnet,
+        "data_path": RESNET_DATA_PATH
+    },
+    "vgg": {
+        "model": None,
+        "data_path": VGG_DATA_PATH
+    }
+}
 
 # === Load available embeddings ===
 @timing
@@ -39,11 +48,11 @@ def load_available_data(data_path, isNew):
 
 
 @timing
-def get_embed_data(isNew, model):
+def get_embed_data(isNew, model_name):
     dataset_path = STAGE_PATH if isNew else DATASET_PATH
     dataset = datasets.ImageFolder(dataset_path)
     idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
-    model = resnet if model == "resnet" else vgg_model
+    model = model_dict[model_name]["model"]
 
     def collate_func(batch):
         faces = []
@@ -73,9 +82,9 @@ def get_embed_data(isNew, model):
         faces = [face.to(device) for face in batch_faces]
         with torch.no_grad():
             faces = [face.unsqueeze(0).to(device) for face in batch_faces]
-            if model == vgg_model:
+            if model_name == "vgg":
                 features = torch.cat(faces)
-                embeddings = vgg_model(features)
+                embeddings = model(features)
                 embeddings = embeddings.view(embeddings.size(0), -1).cpu()
             elif model == resnet:
                 embeddings = resnet(torch.cat(faces)).cpu()
