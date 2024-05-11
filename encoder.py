@@ -1,8 +1,9 @@
 import torch
-from facenet_pytorch import MTCNN, InceptionResnetV1
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from deepface import DeepFace
+from models import model_dict, mtcnn
+
 
 from threading import Thread
 import numpy as np
@@ -21,25 +22,6 @@ isNew = args.isNew
 
 # === Configuration ===
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# === Initialize models ===
-# resnet
-mtcnn = MTCNN()
-resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
-# vgg-face
-vggface = DeepFace.represent
-
-# Models dict
-model_dict = {
-    "resnet": {
-        "model": resnet,
-        "data_path": RESNET_DATA_PATH,
-    },
-    "vgg-face": {
-        "model": vggface,
-        "data_path": VGG_FACE_DATA_PATH,
-    }
-}
 
 # === Load available embeddings ===
 @timing
@@ -92,7 +74,7 @@ def get_embed_data(isNew, model_name):
             with torch.no_grad():
                 faces = [face.unsqueeze(0).to(device) for face in batch_faces]
                 if model_name == "resnet":
-                    embeddings = resnet(torch.cat(faces)).cpu()
+                    embeddings = model(torch.cat(faces)).cpu()
                     
             for idx, emb in zip(batch_indices, embeddings):
                 if idx not in embeddings_dict:

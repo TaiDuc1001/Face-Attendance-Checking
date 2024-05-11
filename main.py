@@ -1,33 +1,11 @@
 import torch
-from deepface import DeepFace
-from facenet_pytorch import MTCNN, InceptionResnetV1
 import torch.nn.functional as F
+from models import model_dict, mtcnn
 
 from PIL import Image
-from helper import timing
 import os
 from config import *
 
-# Init mtcnn, resnet and vgg16 model
-mtcnn = MTCNN()
-resnet = InceptionResnetV1(pretrained="vggface2").eval()
-vggface = DeepFace.represent
-
-# Models dict
-model_dict = {
-    "resnet": {
-        "model": resnet,
-        "data_path": RESNET_DATA_PATH,
-        "alpha": 0.8,
-        "gamma": 0.8,
-    },
-    "vgg-face": {
-        "model": vggface,
-        "data_path": VGG_FACE_DATA_PATH,
-        "alpha": 0.6,
-        "gamma": 0.2,
-    }
-}
 class ImageInfo:
     def __init__(self, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
         self.dataset_path = dataset_path
@@ -55,7 +33,7 @@ class ImageInfo:
                 return None, None, None
 
         else:
-            embeddings = [DeepFace.represent(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]]
+            embeddings = [model(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]]
 
         # === Load data ===
         saved_data = torch.load(data_path)
