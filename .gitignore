@@ -9,4 +9,4 @@ test
 models
 
 resnet-data.pt
-vgg16-data.pt
+vgg-face-data.pt
