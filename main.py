@@ -112,7 +112,11 @@ class ImageInfo:
                 max_score_model = max(models.values(), key=lambda x: x['score'])
                 person = max_score_model['person']
                 score = max_score_model['score']
-            print(f"Person: {person}, Score: {score}")
+                
+            if score > THRESHOLD:
+                print(f"Person: {person} --- Score: {score}")
+            else:
+                print(f"Person: Unknown --- Score: {score}")
 
 if __name__ == "__main__":
     ImageInfo().print_result()
