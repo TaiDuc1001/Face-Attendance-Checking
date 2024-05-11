@@ -28,53 +28,51 @@ model_dict = {
         "gamma": 0.2,
     }
 }
-
-def calculate_score(predictions, targets, alpha):
-    predictions = torch.tensor(predictions)
-    targets = torch.tensor(targets)
-    cosine_similarity = F.cosine_similarity(predictions, targets).item()
-    l2_distance = F.pairwise_distance(predictions, targets).item()
-    score = alpha * cosine_similarity + (1 - alpha) * l2_distance
-    return score
-
-def face_match(image_path, data_path, model_name):
-    model = model_dict[model_name]["model"]
-    if model_name != "vgg-face":
-        img = Image.open(image_path)
-        face = mtcnn(img)
-        if face is not None:
-            face = face.unsqueeze(0)
-            embeddings = model(face).detach()
-        else:
-            return None, None, None
-
-    else:
-        embeddings = [DeepFace.represent(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]]
-
-    # === Load data ===
-    saved_data = torch.load(data_path)
-    embedding_list = saved_data[0]
-    name_list = saved_data[1]
-
-    score_list = []
-    for old_embeddings in embedding_list:
-        score = calculate_score(embeddings, old_embeddings, alpha=0.8)
-        score_list.append(score)
-        
-    idx_min = score_list.index(max(score_list))
-
-    if idx_min is not None:
-        return name_list[idx_min], score_list[idx_min], score_list
-    else:
-        return None, None, None
-
-
 class ImageInfo:
     def __init__(self, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
         self.dataset_path = dataset_path
         self.extracted_faces_path = extracted_faces_path
         self.model_dict = model_dict
         self.voting = {name: {} for name in os.listdir(self.dataset_path)}
+
+    def calculate_score(self, predictions, targets, alpha):
+        predictions = torch.tensor(predictions)
+        targets = torch.tensor(targets)
+        cosine_similarity = F.cosine_similarity(predictions, targets).item()
+        l2_distance = F.pairwise_distance(predictions, targets).item()
+        score = alpha * cosine_similarity + (1 - alpha) * l2_distance
+        return score
+
+    def face_match(self, image_path, data_path, model_name):
+        model = self.model_dict[model_name]["model"]
+        if model_name != "vgg-face":
+            img = Image.open(image_path)
+            face = mtcnn(img)
+            if face is not None:
+                face = face.unsqueeze(0)
+                embeddings = model(face).detach()
+            else:
+                return None, None, None
+
+        else:
+            embeddings = [DeepFace.represent(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]]
+
+        # === Load data ===
+        saved_data = torch.load(data_path)
+        embedding_list = saved_data[0]
+        name_list = saved_data[1]
+
+        score_list = []
+        for old_embeddings in embedding_list:
+            score = self.calculate_score(embeddings, old_embeddings, alpha=0.8)
+            score_list.append(score)
+            
+        idx_min = score_list.index(max(score_list))
+
+        if idx_min is not None:
+            return name_list[idx_min], score_list[idx_min], score_list
+        else:
+            return None, None, None
 
     def analyze_images(self):
         image_files = os.listdir(self.extracted_faces_path)
@@ -84,7 +82,7 @@ class ImageInfo:
             image_path = os.path.join(self.extracted_faces_path, image_file)
             total_score = 0
             for model_name in self.model_dict:
-                person, score, _ = face_match(image_path=image_path, data_path=self.model_dict[model_name]["data_path"], model_name=model_name)
+                person, score, _ = self.face_match(image_path=image_path, data_path=self.model_dict[model_name]["data_path"], model_name=model_name)
                 if score is not None:
                     total_score += score * self.model_dict[model_name]["gamma"]
                 if image_file not in image_info:
@@ -112,7 +110,7 @@ class ImageInfo:
                 max_score_model = max(models.values(), key=lambda x: x['score'])
                 person = max_score_model['person']
                 score = max_score_model['score']
-                
+
             if score > THRESHOLD:
                 print(f"Person: {person} --- Score: {score}")
             else:
