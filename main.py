@@ -70,7 +70,7 @@ def face_match(image_path, data_path, model_name):
 
 
 class ImageInfo:
-    def __init__(self, dataset_path, extracted_faces_path, model_dict):
+    def __init__(self, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
         self.dataset_path = dataset_path
         self.extracted_faces_path = extracted_faces_path
         self.model_dict = model_dict
@@ -98,17 +98,21 @@ class ImageInfo:
                 image_info[image_file][model_name] = a
             self.voting[image_file] = total_score
         return image_info
-            
-voting = ImageInfo(DATASET_PATH, EXTRACTED_FACES_PATH, model_dict).analyze_images()
-for image, models in voting.items():
-    print(f"Image: {image}")
-    persons_for_each_image = [data["person"] for data in models.values()]
-    isSame = all(person == persons_for_each_image[0] for person in persons_for_each_image)
-    if isSame:
-        person = persons_for_each_image[0]
-        score = models[next(iter(models))]['score']
-    else:
-        max_score_model = max(models.values(), key=lambda x: x['score'])
-        person = max_score_model['person']
-        score = max_score_model['score']
-    print(f"Person: {person}, Score: {score}")
+    
+    def print_result(self):
+        voting = self.analyze_images()
+        for image, models in voting.items():
+            print(f"Image: {image}")
+            persons_for_each_image = [data["person"] for data in models.values()]
+            isSame = all(person == persons_for_each_image[0] for person in persons_for_each_image)
+            if isSame:
+                person = persons_for_each_image[0]
+                score = models[next(iter(models))]['score']
+            else:
+                max_score_model = max(models.values(), key=lambda x: x['score'])
+                person = max_score_model['person']
+                score = max_score_model['score']
+            print(f"Person: {person}, Score: {score}")
+
+if __name__ == "__main__":
+    ImageInfo().print_result()
