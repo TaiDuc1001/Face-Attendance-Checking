@@ -2,12 +2,16 @@ import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from torchvision import datasets
 from torch.utils.data import DataLoader
+from deepface import DeepFace
+
 from threading import Thread
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 from helper import timing
 import argparse
 import shutil
 import os
-from config import DATASET_PATH, VGG_DATA_PATH, STAGE_PATH, RESNET_DATA_PATH, VGG_WEIGHTS_PATH
+from config import *
 
 # === ArgParse ===
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -19,19 +23,21 @@ isNew = args.isNew
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # === Initialize models ===
+# resnet
 mtcnn = MTCNN()
 resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
-
+# vgg-face
+vggface = DeepFace.represent
 
 # Models dict
 model_dict = {
     "resnet": {
         "model": resnet,
-        "data_path": RESNET_DATA_PATH
+        "data_path": RESNET_DATA_PATH,
     },
-    "vgg": {
-        "model": None,
-        "data_path": VGG_DATA_PATH
+    "vgg-face": {
+        "model": vggface,
+        "data_path": VGG_FACE_DATA_PATH,
     }
 }
 
@@ -74,7 +80,7 @@ def get_embed_data(isNew, model_name):
             thread.join()
         return faces, indices
 
-    loader = DataLoader(dataset, batch_size=32, collate_fn=collate_func)
+    loader = DataLoader(dataset, batch_size=BATCH_SIZE, collate_fn=collate_func)
     embeddings_dict = {}
 
     for batch_faces, batch_indices in loader:
@@ -82,11 +88,7 @@ def get_embed_data(isNew, model_name):
         faces = [face.to(device) for face in batch_faces]
         with torch.no_grad():
             faces = [face.unsqueeze(0).to(device) for face in batch_faces]
-            if model_name == "vgg":
-                features = torch.cat(faces)
-                embeddings = model(features)
-                embeddings = embeddings.view(embeddings.size(0), -1).cpu()
-            elif model == resnet:
+            if model_name == "resnet":
                 embeddings = resnet(torch.cat(faces)).cpu()
                 
         for idx, emb in zip(batch_indices, embeddings):
@@ -105,18 +107,58 @@ def get_embed_data(isNew, model_name):
     return embedding_list, name_list
 
 @timing
-def save(model_name, data_path, isNew=isNew):
-    old_embedding_list, old_name_list = load_available_data(data_path, isNew)
-    embedding_list, name_list = get_embed_data(isNew, model_name)
+def encode_image(image_path):
+    try:
+        embedding = DeepFace.represent(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]
+        return embedding
+    except Exception as e:
+        print(f"Error processing {image_path}: {e}")
+        return None
 
-    if isNew:
-        old_embedding_list.extend(embedding_list)
-        old_name_list.extend(name_list)
-        embedding_list, name_list = old_embedding_list, old_name_list
-        
-    data = [embedding_list, name_list]
+@timing
+def get_embed_data_for_vggface(isNew, model_name):
+    images_folder = STAGE_PATH if isNew else DATASET_PATH
+    embeddings = {}
+    executor = ThreadPoolExecutor(max_workers=WORKERS)
+
+    for person_folder in os.listdir(images_folder):
+        person_embeddings = []
+        person_images_folder = os.path.join(images_folder, person_folder)
+
+        if os.path.isdir(person_images_folder):
+            image_paths = [os.path.join(person_images_folder, image_file) for image_file in os.listdir(person_images_folder)]
+            futures = [executor.submit(encode_image, image_path) for image_path in image_paths]
+            results = [future.result() for future in futures]
+
+            for result in results:
+                if result is not None:
+                    person_embeddings.append(result)
+
+            if person_embeddings:
+                person_embeddings = np.array(person_embeddings)
+                average_embedding = np.mean(person_embeddings, axis=0)
+                embeddings[person_folder] = average_embedding
+
+    return embeddings
+    
+@timing
+def save(model_name, data_path, isNew=isNew):
+    if model_name == "vgg-face":
+        data = get_embed_data_for_vggface(isNew, model_name)
+
+    else:
+        old_embedding_list, old_name_list = load_available_data(data_path, isNew)
+        embedding_list, name_list = get_embed_data(isNew, model_name)
+
+        if isNew:
+            old_embedding_list.extend(embedding_list)
+            old_name_list.extend(name_list)
+            embedding_list, name_list = old_embedding_list, old_name_list
+            
+        data = [embedding_list, name_list]
     print(f"Save {data_path}.")
     torch.save(data, data_path)
+
 
 @timing
 def moving():
@@ -131,7 +173,9 @@ def moving():
         shutil.move(source_path, destination_path)
         print(f"Moved {source_path} => {destination_path}")
 
-save('resnet', RESNET_DATA_PATH)
-save('vgg', VGG_DATA_PATH)
+
+for model_name in model_dict:
+    save(model_name, model_dict[model_name]["data_path"])
+
 if isNew:
     moving()
