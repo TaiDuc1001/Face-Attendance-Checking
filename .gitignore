@@ -10,3 +10,4 @@ models
 
 resnet-data.pt
 vgg-face-data.pt
+info.json
