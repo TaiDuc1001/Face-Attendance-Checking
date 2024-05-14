@@ -3,8 +3,16 @@ import torch.nn.functional as F
 from models import model_dict, mtcnn
 
 from PIL import Image
+import argparse
 import os
+import json
 from config import *
+
+# === ArgParse ===
+parser = argparse.ArgumentParser(description="Compare faces with class target.")
+parser.add_argument('--class_code', type=str, help='The class code')
+args = parser.parse_args()
+class_code = args.class_code
 
 class ImageInfo:
     def __init__(self, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
@@ -12,6 +20,15 @@ class ImageInfo:
         self.extracted_faces_path = extracted_faces_path
         self.model_dict = model_dict
         self.voting = {name: {} for name in os.listdir(self.dataset_path)}
+
+    def match_classcode_with_database(self, json_path=INFO_PATH, class_code=class_code):
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        existing_students = []
+        for student in data:
+            if class_code in student["Class Code"]:
+                existing_students.append(student)
+        return existing_students
 
     def calculate_score(self, predictions, targets, alpha):
         predictions = torch.tensor(predictions)
