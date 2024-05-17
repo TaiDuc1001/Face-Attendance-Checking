@@ -5,3 +5,5 @@ def timing(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         print(f"Executed for {func.__name__}: {(end_time-start_time):.4f} seconds.")
+        return result
+    return wrapper
