@@ -7,7 +7,6 @@ database
 stage
 test
 models
+features
 
-resnet-data.pt
-vgg-face-data.pt
 info.json
