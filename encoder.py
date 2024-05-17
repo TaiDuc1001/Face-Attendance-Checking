@@ -4,15 +4,14 @@ from torch.utils.data import DataLoader
 from deepface import DeepFace
 from models import model_dict, mtcnn
 
-
 from threading import Thread
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
-from helper import timing
 import argparse
 import shutil
 import os
 from config import *
+from helper import *
 
 # === ArgParse ===
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -24,7 +23,6 @@ isNew = args.isNew
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # === Load available embeddings ===
-@timing
 def load_available_data(data_path, isNew):
     if isNew:
         old_data = torch.load(data_path)
@@ -40,8 +38,8 @@ def get_embed_data(isNew, model_name):
     dataset_path = STAGE_PATH if isNew else DATASET_PATH
     embedding_list = []
     name_list = []
-    print("Embedding data...")
-    if model_name != "vgg-face":
+    print(f"Embedding data for {model_name}...")
+    if model_name == "resnet":
         dataset = datasets.ImageFolder(dataset_path)
         idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
         model = model_dict[model_name]["model"]
@@ -98,7 +96,7 @@ def get_embed_data(isNew, model_name):
             person_images_folder = os.path.join(dataset_path, person_folder)
             if os.path.isdir(person_images_folder):
                 image_paths = [os.path.join(person_images_folder, image_file) for image_file in os.listdir(person_images_folder)]
-                futures = [executor.submit(encode_image, image_path) for image_path in image_paths]
+                futures = [executor.submit(encode_image, image_path, model_name) for image_path in image_paths]
                 results = [future.result() for future in futures]
                 for result in results:
                     if result is not None:
@@ -109,15 +107,14 @@ def get_embed_data(isNew, model_name):
                     embeddings[person_folder] = average_embedding
         return list(embeddings.values()), list(embeddings.keys())
 
-def encode_image(image_path):
+def encode_image(image_path, model_name):
     try:
-        embedding = DeepFace.represent(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]
+        embedding = DeepFace.represent(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]
         return embedding
     except Exception as e:
         print(f"Error processing {image_path}: {e}")
         return None
 
-@timing
 def save(model_name, data_path, isNew=isNew):
     old_embedding_list, old_name_list = load_available_data(data_path, isNew)
     embedding_list, name_list = get_embed_data(isNew, model_name)
@@ -129,8 +126,6 @@ def save(model_name, data_path, isNew=isNew):
     print(f"Save {data_path}.")
     torch.save(data, data_path)
 
-
-@timing
 def moving():
     f"""
     Move folders from {STAGE_PATH} to {DATASET_PATH} after embedding new students in {STAGE_PATH}
