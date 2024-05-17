@@ -32,6 +32,8 @@ class ImageInfo:
         return existing_students
 
     def calculate_score(self, predictions, targets, alpha):
+        if predictions is None:
+            return 0
         predictions = torch.tensor(predictions)
         targets = torch.tensor(targets)
         cosine_similarity = F.cosine_similarity(predictions, targets).item()
@@ -52,37 +54,57 @@ class ImageInfo:
                 if student["ID"] == _id:
                     indices.append(i)
         return indices
-
-    def face_match(self, image_path, data_path, model_name):
+    
+    def calculate_embedding_target_image_with_correspond_model(self, image_path, model_name):
         model = self.model_dict[model_name]["model"]
-        if model_name != "vgg-face":
+        if model_name == "resnet":
             img = Image.open(image_path)
             face = mtcnn(img)
             if face is not None:
                 face = face.unsqueeze(0)
                 embeddings = model(face).detach()
             else:
-                return None, None
-
+                embeddings = None
         else:
-            embeddings = [model(image_path, model_name='VGG-Face', enforce_detection=False)[0]["embedding"]]
+            embeddings = [model(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]]
 
-        # === Load data ===
-        embedding_list, id_list = self.load_available_data(data_path)
+        return embeddings
 
-        # === Match class code with database ===
-        score_list = []
-        embedding_list = [embedding_list[i] for i in self.match_name(self.existing_students, id_list)]
-        id_list = [id_list[i] for i in self.match_name(self.existing_students, id_list)]
-        for old_embeddings in embedding_list:
-            score = self.calculate_score(embeddings, old_embeddings, alpha=model_dict[model_name]["alpha"])
-            score_list.append(score)
-            
-        idx_max = score_list.index(max(score_list))
-        if idx_max is not None:
-            return id_list[idx_max], score_list[idx_max]
+
+    def face_match(self, image_path):
+        score_list_for_each_person = []
+        for model_name in self.model_dict:
+            # Calculate embedding of target face
+            embedding = self.calculate_embedding_target_image_with_correspond_model(image_path, model_name)
+            original_embedding_list, id_list = self.load_available_data(model_dict[model_name]["data_path"])
+            original_embedding_list = [original_embedding_list[i] for i in self.match_name(self.existing_students, id_list)]
+            id_list = [id_list[i] for i in self.match_name(self.existing_students, id_list)]
+            score_list_for_each_person_each_model = []
+
+            for original_embedding in original_embedding_list:
+                score = self.calculate_score(embedding, original_embedding, alpha=model_dict[model_name]["alpha"])
+                score_list_for_each_person_each_model.append(score)
+            score_list_for_each_person.append(score_list_for_each_person_each_model)
+
+        total_score_list_for_each_image = []
+        number_of_person = len(score_list_for_each_person[0])
+        number_of_model = len(score_list_for_each_person)
+
+        for i in range(number_of_person):
+            total_score_for_each_person = 0
+            for j in range(number_of_model):
+                total_score_for_each_person += score_list_for_each_person[j][i] * model_dict[model_name]["gamma"]
+            total_score_list_for_each_image.append(total_score_for_each_person)
+
+        max_score = max(total_score_list_for_each_image)
+        idx_max = total_score_list_for_each_image.index(max_score)
+        id_of_that_max_score = id_list[idx_max]
+        if max_score > THRESHOLD:
+            return id_of_that_max_score, max_score
         else:
-            return None, None
+            return None, max_score
+
+
 
     def analyze_images(self):
         image_files = os.listdir(self.extracted_faces_path)
@@ -90,45 +112,29 @@ class ImageInfo:
 
         for image_file in image_files:
             image_path = os.path.join(self.extracted_faces_path, image_file)
-            total_score = 0
-            for model_name in self.model_dict:
-                _id, score = self.face_match(image_path=image_path, data_path=self.model_dict[model_name]["data_path"], model_name=model_name)
-                if score is not None:
-                    total_score += score * self.model_dict[model_name]["gamma"]
-                if image_file not in image_info:
-                    image_info[image_file] = {}
-                a = {
-                    "score": score if score is not None else 0,
-                    "id": _id,
-                }
-                if model_name not in image_info[image_file]:
-                    image_info[image_file][model_name] = {}
-                image_info[image_file][model_name] = a
-            self.voting[image_file] = total_score
+            _id, score = self.face_match(image_path=image_path)
+            if image_file not in image_info:
+                image_info[image_file] = {}
+            image_info[image_file] = {
+                "score": score,
+                "id": _id
+            }
         return image_info
 
     def format_result(self, image, _id, score, options=["name", "score"]):
         print(f"Image: {image}")
-        if score > THRESHOLD:
+        if score is not None:
             name = [student["Name"] for student in self.existing_students if student["ID"] == _id][0]
             message = f"Person: {name} --- Score: {score}"
             print(message)
         else:
-            print(f"Person: Unknown --- Score: {score}")
+            print(f"Person: Unknown --- Score: Unknown")
     
     def print_result(self, options=[]):
         voting = self.analyze_images()
-        for image, models in voting.items():
-            persons_for_each_image = [data["id"] for data in models.values()]
-            isSame = all(person == persons_for_each_image[0] for person in persons_for_each_image)
-            if isSame:
-                _id = persons_for_each_image[0]
-                score = models[next(iter(models))]['score']
-            else:
-                max_score_model = max(models.values(), key=lambda x: x['score'])
-                _id = max_score_model['id']
-                score = max_score_model['score']
-            
+        for image in voting:
+            _id = voting[image]["id"]
+            score = voting[image]["score"]
             self.format_result(image=image, _id=_id, score=score, options=options)
 
 if __name__ == "__main__":
