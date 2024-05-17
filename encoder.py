@@ -43,6 +43,7 @@ def get_embed_data(isNew, model_name):
         dataset = datasets.ImageFolder(dataset_path)
         idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
         model = model_dict[model_name]["model"]
+        model = model.to(device)
 
         def collate_func(batch):
             faces = []
