@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from models import model_dict, mtcnn
 
 from PIL import Image
+from functools import lru_cache
 import argparse
 import os
 import json
@@ -22,12 +23,13 @@ class ImageInfo:
         self.voting = {name: {} for name in os.listdir(self.dataset_path)}
         self.existing_students = self.match_classcode_with_database()
 
+    @lru_cache(maxsize=None)
     def match_classcode_with_database(self, json_path=INFO_PATH, class_code=class_code):
         with open(json_path, 'r') as f:
             data = json.load(f)
         existing_students = []
         for student in data:
-            if class_code in student["Class Code"]:
+            if "se1911" in student["Class Code"]:
                 existing_students.append(student)
         return existing_students
 
@@ -40,13 +42,14 @@ class ImageInfo:
         l2_distance = F.pairwise_distance(predictions, targets).item()
         score = alpha * cosine_similarity + (1 - alpha) * l2_distance
         return score
-    
+
+    @lru_cache(maxsize=None)
     def load_available_data(self, data_path):
         data = torch.load(data_path)
         embedding_list = data[0]
         id_list = data[1]
         return embedding_list, id_list
-    
+
     def match_name(self, existing_students, id_list):
         indices = []
         for student in existing_students:
@@ -55,6 +58,7 @@ class ImageInfo:
                     indices.append(i)
         return indices
     
+    @lru_cache(maxsize=None)
     def calculate_embedding_target_image_with_correspond_model(self, image_path, model_name):
         model = self.model_dict[model_name]["model"]
         if model_name == "resnet":
@@ -70,7 +74,7 @@ class ImageInfo:
 
         return embeddings
 
-
+    @lru_cache(maxsize=None)
     def face_match(self, image_path):
         score_list_for_each_person = []
         for model_name in self.model_dict:
@@ -85,7 +89,6 @@ class ImageInfo:
                 score = self.calculate_score(embedding, original_embedding, alpha=model_dict[model_name]["alpha"])
                 score_list_for_each_person_each_model.append(score)
             score_list_for_each_person.append(score_list_for_each_person_each_model)
-
         total_score_list_for_each_image = []
         number_of_person = len(score_list_for_each_person[0])
         number_of_model = len(score_list_for_each_person)
