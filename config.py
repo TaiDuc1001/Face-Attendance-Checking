@@ -7,7 +7,7 @@ RESNET_DATA_PATH = "features/resnet-data.pt"
 VGGFACE_DATA_PATH = "features/vggface-data.pt"
 ARCFACE_DATA_PATH = "features/arcface-data.pt"
 GHOSTFACENET_DATA_PATH = "features/ghostfacenet-data.pt"
-INFO_PATH = "info.json"
+INFO_PATH = "benchmark.json"
 
 # Constants
 THRESHOLD = 0
