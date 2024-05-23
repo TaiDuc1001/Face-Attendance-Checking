@@ -9,27 +9,21 @@ import os
 import json
 from config import *
 
-# === ArgParse ===
-parser = argparse.ArgumentParser(description="Compare faces with class target.")
-parser.add_argument('--class_code', type=str, help='The class code')
-args = parser.parse_args()
-class_code = args.class_code
-
 class ImageInfo:
-    def __init__(self, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
+    def __init__(self, class_code, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
         self.dataset_path = dataset_path
         self.extracted_faces_path = extracted_faces_path
         self.model_dict = model_dict
+        self.class_code = class_code
         self.voting = {name: {} for name in os.listdir(self.dataset_path)}
         self.existing_students = self.match_classcode_with_database()
 
-    @lru_cache(maxsize=None)
-    def match_classcode_with_database(self, json_path=INFO_PATH, class_code=class_code):
+    def match_classcode_with_database(self, json_path=INFO_PATH):
         with open(json_path, 'r') as f:
             data = json.load(f)
         existing_students = []
         for student in data:
-            if "se1911" in student["Class Code"]:
+            if self.class_code in student["Class Code"]:
                 existing_students.append(student)
         return existing_students
 
@@ -43,12 +37,14 @@ class ImageInfo:
         score = alpha * cosine_similarity + (1 - alpha) * l2_distance
         return score
 
-    @lru_cache(maxsize=None)
-    def load_available_data(self, data_path):
+    @lru_cache(maxsize=1024)
+    def load_available_data(self, data_path, model_name):
         data = torch.load(data_path)
-        embedding_list = data[0]
+        original_embedding_list = data[0]
         id_list = data[1]
-        return embedding_list, id_list
+        original_embedding_list = [original_embedding_list[i] for i in self.match_name(self.existing_students, id_list)]
+        id_list = [id_list[i] for i in self.match_name(self.existing_students, id_list)]
+        return original_embedding_list, id_list
 
     def match_name(self, existing_students, id_list):
         indices = []
@@ -58,7 +54,6 @@ class ImageInfo:
                     indices.append(i)
         return indices
     
-    @lru_cache(maxsize=None)
     def calculate_embedding_target_image_with_correspond_model(self, image_path, model_name):
         model = self.model_dict[model_name]["model"]
         if model_name == "resnet":
@@ -74,15 +69,12 @@ class ImageInfo:
 
         return embeddings
 
-    @lru_cache(maxsize=None)
     def face_match(self, image_path):
         score_list_for_each_person = []
         for model_name in self.model_dict:
             # Calculate embedding of target face
             embedding = self.calculate_embedding_target_image_with_correspond_model(image_path, model_name)
-            original_embedding_list, id_list = self.load_available_data(model_dict[model_name]["data_path"])
-            original_embedding_list = [original_embedding_list[i] for i in self.match_name(self.existing_students, id_list)]
-            id_list = [id_list[i] for i in self.match_name(self.existing_students, id_list)]
+            original_embedding_list, id_list = self.load_available_data(model_dict[model_name]["data_path"], model_name)
             score_list_for_each_person_each_model = []
 
             for original_embedding in original_embedding_list:
@@ -106,8 +98,6 @@ class ImageInfo:
             return id_of_that_max_score, max_score
         else:
             return None, max_score
-
-
 
     def analyze_images(self):
         image_files = os.listdir(self.extracted_faces_path)
@@ -141,4 +131,9 @@ class ImageInfo:
             self.format_result(image=image, _id=_id, score=score, options=options)
 
 if __name__ == "__main__":
-    ImageInfo().print_result()
+    # === ArgParse ===
+    parser = argparse.ArgumentParser(description="Compare faces with class target.")
+    parser.add_argument('--class_code', type=str, help='The class code')
+    args = parser.parse_args()
+    class_code = args.class_code
+    ImageInfo(class_code=class_code).print_result()
