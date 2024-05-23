@@ -1,12 +1,30 @@
-.env
+# VSCODE
 .vscode
 __pycache__
-extracted-faces
-lfw-deepfunneled
-database
-stage
-test
-models
-features
 
+# Extracted-faces
+extracted-faces
+
+# Databases
+database
+benchmark
+
+# Stage folder
+stage
+
+# Test folder
+test
+
+# Features
+features
+features-benchmark
+
+# JSON paths
 info.json
+benchmark.json
+
+# Run benchmark
+change_properties.py
+
+# Create benchmark
+move_file.py
