@@ -1,6 +1,6 @@
 import argparse
 import subprocess
-from config import TEST_IMAGES_PATH
+from scripts.config import TEST_IMAGES_PATH
 
 def run_face_detector(target_image):
     cmd = ['python', 'face_detector.py', '-f', target_image]

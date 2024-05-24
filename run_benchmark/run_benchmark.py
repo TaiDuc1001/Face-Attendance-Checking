@@ -1,8 +1,13 @@
-from helper import timing
-from compare_faces import ImageInfo
-from config import BENCHMARK_INFO_PATH, BENCHMARK_PATH
-import json
+import sys
 import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.join(script_dir, '..')
+sys.path.append(root_dir)
+
+from scripts.helper import timing
+from scripts.compare_faces import ImageInfo
+from scripts.config import BENCHMARK_INFO_PATH, BENCHMARK_PATH
+import json
 import argparse
 
 def get_indices(class_code, json_path=BENCHMARK_INFO_PATH):

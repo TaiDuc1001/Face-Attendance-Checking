@@ -1,6 +1,12 @@
+import sys
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.join(script_dir, '..')
+sys.path.append(root_dir)
+
 from deepface import DeepFace
 from facenet_pytorch import MTCNN, InceptionResnetV1
-from config import *
+from scripts.config import *
 
 mtcnn = MTCNN()
 class ResnetModel:

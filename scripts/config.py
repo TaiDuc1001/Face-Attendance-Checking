@@ -18,8 +18,8 @@ VGGFACE_DATA_PATH = "features/vggface-data.pt"
 ARCFACE_DATA_PATH = "features/arcface-data.pt"
 
 # JSON Paths
-INFO_PATH = "info.json"
-BENCHMARK_INFO_PATH = "benchmark.json"
+INFO_PATH = "json/info.json"
+BENCHMARK_INFO_PATH = "json/benchmark.json"
 
 # Constants
 THRESHOLD = 0

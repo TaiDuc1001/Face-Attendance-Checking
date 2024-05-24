@@ -1,17 +1,23 @@
+import sys
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.join(script_dir, '..')
+sys.path.append(root_dir)
+
 import torch
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from deepface import DeepFace
-from models import model_dict, mtcnn
+from model.models import model_dict, mtcnn
 
 from threading import Thread
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import argparse
 import shutil
-import os
-from config import *
-from helper import *
+from scripts.config import *
+from scripts.helper import *
 
 # === ArgParse ===
 parser = argparse.ArgumentParser(description='Process some integers.')

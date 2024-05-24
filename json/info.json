@@ -1,0 +1,125 @@
+[
+    {
+        "ID": "ab1000",
+        "Name": "An Le",
+        "Class Code": [
+            "se1901",
+            "se1907",
+            "se1902"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1001",
+        "Name": "Chi Dai",
+        "Class Code": [
+            "se1903",
+            "se1902",
+            "se1901"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1002",
+        "Name": "Duc Anh",
+        "Class Code": [
+            "se1901",
+            "se1905",
+            "se1904"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1003",
+        "Name": "Duc Phan",
+        "Class Code": [
+            "se1904",
+            "se1903"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1004",
+        "Name": "Duong Dao",
+        "Class Code": [
+            "se1901",
+            "se1906"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1005",
+        "Name": "Khanh Nam",
+        "Class Code": [
+            "se1901",
+            "se1907",
+            "se1905"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1006",
+        "Name": "Khoi Moi",
+        "Class Code": [
+            "se1902",
+            "se1903",
+            "se1905"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1007",
+        "Name": "Phu Liem",
+        "Class Code": [
+            "se1902"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1008",
+        "Name": "Phuc",
+        "Class Code": [
+            "se1901",
+            "se1906"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1009",
+        "Name": "Phuc Khang",
+        "Class Code": [
+            "se1901",
+            "se1902",
+            "se1903"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1010",
+        "Name": "Phuc Minh",
+        "Class Code": [
+            "se1907",
+            "se1903",
+            "se1901"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1011",
+        "Name": "Quoc Tuan",
+        "Class Code": [
+            "se1907",
+            "se1906"
+        ],
+        "Department": "Software Engineering"
+    },
+    {
+        "ID": "ab1012",
+        "Name": "Tri",
+        "Class Code": [
+            "se1906",
+            "se1902"
+        ],
+        "Department": "Software Engineering"
+    }
+]

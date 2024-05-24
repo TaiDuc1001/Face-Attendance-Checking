@@ -18,13 +18,3 @@ test
 # Features
 features
 features-benchmark
-
-# JSON paths
-info.json
-benchmark.json
-
-# Run benchmark
-change_properties.py
-
-# Create benchmark
-move_file.py

@@ -1,10 +1,15 @@
-from facenet_pytorch import MTCNN, InceptionResnetV1
+import sys
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.join(script_dir, '..')
+sys.path.append(root_dir)
 
+from facenet_pytorch import MTCNN, InceptionResnetV1
 import argparse
 import cv2
 import shutil
 import os
-from config import TEST_IMAGES_PATH, EXTRACTED_FACES_PATH
+from scripts.config import TEST_IMAGES_PATH, EXTRACTED_FACES_PATH
 
 mtcnn = MTCNN()
 resnet = InceptionResnetV1(pretrained='vggface2').eval()

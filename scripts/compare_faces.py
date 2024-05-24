@@ -1,13 +1,19 @@
+import sys
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.join(script_dir, '..')
+sys.path.append(root_dir)
+
 import torch
 import torch.nn.functional as F
-from models import model_dict, mtcnn
+from model.models import model_dict, mtcnn
 
 from PIL import Image
 from functools import lru_cache
 import argparse
-import os
 import json
-from config import *
+from scripts.config import *
 
 class ImageInfo:
     def __init__(self, class_code, json_path, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
