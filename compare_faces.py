@@ -10,15 +10,15 @@ import json
 from config import *
 
 class ImageInfo:
-    def __init__(self, class_code, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
+    def __init__(self, class_code, json_path, dataset_path=DATASET_PATH, extracted_faces_path=EXTRACTED_FACES_PATH, model_dict=model_dict):
         self.dataset_path = dataset_path
         self.extracted_faces_path = extracted_faces_path
         self.model_dict = model_dict
         self.class_code = class_code
         self.voting = {name: {} for name in os.listdir(self.dataset_path)}
-        self.existing_students = self.match_classcode_with_database()
+        self.existing_students = self.match_classcode_with_database(json_path)
 
-    def match_classcode_with_database(self, json_path=BENCHMARK_INFO_PATH):
+    def match_classcode_with_database(self, json_path):
         with open(json_path, 'r') as f:
             data = json.load(f)
         existing_students = []
@@ -136,4 +136,4 @@ if __name__ == "__main__":
     parser.add_argument('--class_code', type=str, help='The class code')
     args = parser.parse_args()
     class_code = args.class_code
-    ImageInfo(class_code=class_code).print_result()
+    ImageInfo(class_code=class_code, json_path=INFO_PATH).print_result()
