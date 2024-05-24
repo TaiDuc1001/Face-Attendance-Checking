@@ -15,10 +15,6 @@ class ArcFaceModel:
     def __init__(self):
         self.model = DeepFace.represent
 
-# class GhostFaceNetModel:
-#     def __init__(self):
-#         self.model = DeepFace.represent
-
 # Models dict
 model_dict = {
     "resnet": {
@@ -38,11 +34,5 @@ model_dict = {
         "data_path": VGGFACE_DATA_PATH,
         "alpha": 1,
         "gamma": 0.55,
-    },
-    # "GhostFaceNet": {
-    #     "model": GhostFaceNetModel().model,
-    #     "data_path": GHOSTFACENET_DATA_PATH,
-    #     "alpha": 0.8,
-    #     "gamma": 0.05,
-    # },
+    }
 }
