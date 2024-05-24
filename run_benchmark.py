@@ -1,11 +1,12 @@
 from helper import timing
-from main import ImageInfo
+from compare_faces import ImageInfo
 from config import BENCHMARK_INFO_PATH, BENCHMARK_PATH
 import json
 import os
+import argparse
 
-def get_indices(class_code):
-    image_info = ImageInfo(class_code)
+def get_indices(class_code, json_path=BENCHMARK_INFO_PATH):
+    image_info = ImageInfo(class_code, json_path)
     true_ids = []
     for student in data:
         if class_code in student["Class Code"]:
@@ -44,6 +45,10 @@ def main(start_index, num_target_students, start_index_id):
     return (start_index + num_students), (start_index_id + num_target_students)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run benchmark script.")
+    parser.add_argument('--num_classes', type=int, help='The number of classes to run the benchmark on.')
+    args = parser.parse_args()
+
     image_paths = []
     for root, dirs, files in os.walk(BENCHMARK_PATH):
         for file_name in files:
@@ -57,5 +62,9 @@ if __name__ == "__main__":
     start_index = 0
     start_index_id = 1900
     num_target_students = 1
-    for _ in range(3):
-        start_index, start_index_id = main(start_index, num_target_students, start_index_id)
+    if args.num_classes:
+        num_target_students = args.num_classes
+        for _ in range(num_target_students):
+            start_index, start_index_id = main(start_index, num_target_students, start_index_id)
+    else:
+        print("Please provide the number of classes using --num_classes 1")
