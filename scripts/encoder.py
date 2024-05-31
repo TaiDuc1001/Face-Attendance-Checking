@@ -10,7 +10,6 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from deepface import DeepFace
 from model.models import model_dict, mtcnn
-
 from threading import Thread
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
@@ -19,14 +18,6 @@ import shutil
 from scripts.config import *
 from scripts.helper import *
 
-# === ArgParse ===
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--isNew', action='store_true', help='Whether to process new data')
-args = parser.parse_args()
-isNew = args.isNew
-
-# === Configuration ===
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # === Load available embeddings ===
 def load_available_data(data_path, isNew):
@@ -40,8 +31,8 @@ def load_available_data(data_path, isNew):
 
 
 @timing
-def get_embed_data(isNew, model_name):
-    dataset_path = STAGE_PATH if isNew else DATASET_PATH
+def get_embed_data(isNew, model_name, dataset_path, device):
+    dataset_path = STAGE_PATH if isNew else dataset_path
     embedding_list = []
     name_list = []
     print(f"Embedding data for {model_name}...")
@@ -122,9 +113,9 @@ def encode_image(image_path, model_name):
         print(f"Error processing {image_path}: {e}")
         return None
 
-def save(model_name, data_path, isNew=isNew):
+def save(model_name, data_path, dataset_path, device, isNew):
     old_embedding_list, old_name_list = load_available_data(data_path, isNew)
-    embedding_list, name_list = get_embed_data(isNew, model_name)
+    embedding_list, name_list = get_embed_data(isNew, model_name, dataset_path, device)
     if isNew:
         old_embedding_list.extend(embedding_list)
         old_name_list.extend(name_list)
@@ -133,20 +124,35 @@ def save(model_name, data_path, isNew=isNew):
     print(f"Save {data_path}.")
     torch.save(data, data_path)
 
-def moving():
+def moving(dataset_path, stage_path):
     f"""
-    Move folders from {STAGE_PATH} to {DATASET_PATH} after embedding new students in {STAGE_PATH}
+    Move folders from {stage_path} to {dataset_path} after embedding new students in {stage_path}
     """
-    new_folders = os.listdir(STAGE_PATH)
-    new_folders_path = [os.path.join(STAGE_PATH, folder) for folder in new_folders]
-    destination_path = DATASET_PATH
+    new_folders = os.listdir(stage_path)
+    new_folders_path = [os.path.join(stage_path, folder) for folder in new_folders]
+    destination_path = dataset_path
     for source_path in new_folders_path:
         shutil.move(source_path, destination_path)
         print(f"Moved {source_path} => {destination_path}")
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Encode images to embeddings.")
+    parser.add_argument("--isNew", action="store_true", help="Encode new images.")
+    parser.add_argument("--isBenchmark", action="store_true", help="Encode benchmark images.")
+    args = parser.parse_args()
+    isNew = args.isNew
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dataset_path = DATASET_PATH if not args.isBenchmark else BENCHMARK_PATH
 
-for model_name in model_dict:
-    save(model_name, model_dict[model_name]["data_path"])
+    if args.isBenchmark:
+        for model_name in model_dict:
+            model_dict[model_name]["data_path"] = BENCHMARK_PATH + "-" + model_dict[model_name]["data_path"]
 
-if isNew:
-    moving()
+    for model_name in model_dict:
+        save(model_name=model_name, 
+             data_path=model_dict[model_name]["data_path"], 
+             dataset_path=dataset_path, 
+             device=device, 
+             isNew=isNew)
+    if isNew:
+        moving(dataset_path=DATASET_PATH, stage_path=STAGE_PATH)
