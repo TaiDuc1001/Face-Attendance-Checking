@@ -18,7 +18,6 @@ import shutil
 from scripts.config import *
 from scripts.helper import *
 
-
 # === Load available embeddings ===
 def load_available_data(data_path, isNew):
     if isNew:
@@ -78,13 +77,8 @@ def get_embed_data(isNew, model_name, dataset_path, device):
                 else:
                     embeddings_dict[idx].append(emb)
 
-
-        for idx, embeddings_list in embeddings_dict.items():
-            avg_embedding = torch.stack(embeddings_list).mean(dim=0)
-            embedding_list.append(avg_embedding)
-            name_list.append(idx_to_class[idx])
-
-        return embedding_list, name_list
+        embedding_list = list(embeddings_dict.values())
+        name_list = [idx_to_class[idx] for idx in embeddings_dict.keys()]
 
     else:
         embeddings = {}
@@ -94,18 +88,21 @@ def get_embed_data(isNew, model_name, dataset_path, device):
             person_images_folder = os.path.join(dataset_path, person_folder)
             if os.path.isdir(person_images_folder):
                 image_paths = [os.path.join(person_images_folder, image_file) for image_file in os.listdir(person_images_folder)]
-                futures = [executor.submit(encode_image, image_path, model_name) for image_path in image_paths]
+                futures = [executor.submit(encode_image_with_deepface_models, image_path, model_name) for image_path in image_paths]
                 results = [future.result() for future in futures]
                 for result in results:
                     if result is not None:
                         person_embeddings.append(result)
                 if person_embeddings:
                     person_embeddings = np.array(person_embeddings)
-                    average_embedding = np.mean(person_embeddings, axis=0)
-                    embeddings[person_folder] = average_embedding
-        return list(embeddings.values()), list(embeddings.keys())
+                    embeddings[person_folder] = person_embeddings
 
-def encode_image(image_path, model_name):
+        embedding_list = list(embeddings.values())
+        name_list = list(embeddings.keys())
+
+    return embedding_list, name_list
+
+def encode_image_with_deepface_models(image_path, model_name):
     try:
         embedding = DeepFace.represent(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]
         return embedding
@@ -113,7 +110,7 @@ def encode_image(image_path, model_name):
         print(f"Error processing {image_path}: {e}")
         return None
 
-def save(model_name, data_path, dataset_path, device, isNew):
+def create_data(model_name, data_path, dataset_path, device, isNew):
     old_embedding_list, old_name_list = load_available_data(data_path, isNew)
     embedding_list, name_list = get_embed_data(isNew, model_name, dataset_path, device)
     if isNew:
@@ -149,10 +146,10 @@ if __name__ == "__main__":
             model_dict[model_name]["data_path"] = BENCHMARK_PATH + "-" + model_dict[model_name]["data_path"]
 
     for model_name in model_dict:
-        save(model_name=model_name, 
-             data_path=model_dict[model_name]["data_path"], 
-             dataset_path=dataset_path, 
-             device=device, 
-             isNew=isNew)
+        create_data(model_name=model_name, 
+                    data_path=model_dict[model_name]["data_path"], 
+                    dataset_path=dataset_path, 
+                    device=device, 
+                    isNew=isNew)
     if isNew:
         moving(dataset_path=DATASET_PATH, stage_path=STAGE_PATH)
