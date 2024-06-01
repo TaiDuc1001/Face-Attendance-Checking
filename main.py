@@ -31,6 +31,7 @@ if __name__ == "__main__":
 
     # demo
     parser.add_argument("--class_code", type=str, help="The class code.")
+    parser.add_argument("--no_detect", action="store_true", help="Skip face detection.")
 
     # encode
     parser.add_argument("--isNew", action="store_true", help="Encode new images.")
@@ -48,7 +49,9 @@ if __name__ == "__main__":
             print(f"No --class_code provided. Using default class code: {class_code}")
         if not args.target_image:
             print(f"No --target_image provided. Using default image: {TEST_IMAGES_PATH}/{default_image}")
-        run_face_detector(default_image)
+        if not args.no_detect:
+            print("Skipping face detection.")
+            run_face_detector(default_image)
         run_demo(class_code)
     elif args.benchmark:
         if args.num_classes:
