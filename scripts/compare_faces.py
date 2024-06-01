@@ -37,13 +37,16 @@ class ImageInfo:
         if predictions is None:
             return 0
         predictions = torch.tensor(predictions)
-        targets = torch.tensor(targets)
-        cosine_similarity = F.cosine_similarity(predictions, targets).item()
-        l2_distance = F.pairwise_distance(predictions, targets).item()
-        score = alpha * cosine_similarity + (1 - alpha) * l2_distance
+        scores = []
+        num_target = len(targets)
+        for target in targets:
+            target = torch.tensor(target)
+            cosine_similarity = F.cosine_similarity(predictions, target).item()
+            l2_distance = F.pairwise_distance(predictions, target).item()
+            scores.append(alpha * cosine_similarity + (1 - alpha) * l2_distance)
+        score = sum(scores) / num_target
         return score
 
-    # @lru_cache(maxsize=1024)
     def load_available_data(self, data_path):
         data = torch.load(data_path)
         original_embedding_list = data[0]
@@ -94,7 +97,7 @@ class ImageInfo:
         for i in range(number_of_person):
             total_score_for_each_person = 0
             for j in range(number_of_model):
-                total_score_for_each_person += score_list_for_each_person[j][i] * model_dict[model_name]["gamma"]
+                total_score_for_each_person += score_list_for_each_person[j][i] * model_dict[list(self.model_dict.keys())[j]]["gamma"]
             total_score_list_for_each_image.append(total_score_for_each_person)
 
         max_score = max(total_score_list_for_each_image)
@@ -122,7 +125,7 @@ class ImageInfo:
 
     def format_result(self, image, _id, score, options=["name", "score"]):
         print(f"Image: {image}")
-        if score is not None:
+        if score > 0:
             name = [student["Name"] for student in self.existing_students if student["ID"] == _id][0]
             message = f"Person: {name} --- Score: {score}"
             print(message)
