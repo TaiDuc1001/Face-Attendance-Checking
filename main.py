@@ -50,8 +50,9 @@ if __name__ == "__main__":
         if not args.target_image:
             print(f"No --target_image provided. Using default image: {TEST_IMAGES_PATH}/{default_image}")
         if not args.no_detect:
-            print("Skipping face detection.")
             run_face_detector(default_image)
+        else:
+            print("Skipping face detection.")
         run_demo(class_code)
     elif args.benchmark:
         if args.num_classes:
