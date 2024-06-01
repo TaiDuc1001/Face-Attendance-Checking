@@ -27,18 +27,18 @@ model_dict = {
         "model": ResnetModel().model,
         "data_path": RESNET_DATA_PATH,
         "alpha": 1,
-        "gamma": 0.2,
+        "gamma": 0.35,
     },
     "ArcFace": {
         "model": ArcFaceModel().model,
         "data_path": ARCFACE_DATA_PATH,
-        "alpha": 1,
-        "gamma": 0.25,
+        "alpha": 0.9,
+        "gamma": 0.1,
     },
     "VGG-Face": {
         "model": VGGFaceModel().model,
         "data_path": VGGFACE_DATA_PATH,
-        "alpha": 1,
+        "alpha": 0.8,
         "gamma": 0.55,
     }
 }
