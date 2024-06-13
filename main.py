@@ -2,8 +2,10 @@ import argparse
 import subprocess
 from scripts.config import TEST_IMAGES_PATH
 
-def run_face_detector(target_image):
+def run_face_detector(target_image, method):
     cmd = ['python', './scripts/face_detector.py', '-f', target_image]
+    if method:
+        cmd.extend(["-m", method])
     subprocess.run(cmd)
 
 def run_demo(class_code):
@@ -11,7 +13,11 @@ def run_demo(class_code):
     subprocess.run(cmd)
 
 def run_benchmark(num_classes):
-    cmd = ['python', './run_benchmark/run_benchmark.py', "--num_classes" , str(num_classes)]
+    cmd = ['python', './run_benchmark/run_benchmark.py']
+    if num_classes:
+        cmd.extend(["--num_classes", str(num_classes)])
+    else:
+        print("No --num_classes provided. Running the benchmark on all classes.")
     subprocess.run(cmd)
 
 def run_encoder(isNew, isBenchmark):
@@ -32,6 +38,7 @@ if __name__ == "__main__":
     # demo
     parser.add_argument("--class_code", type=str, help="The class code.")
     parser.add_argument("--no_detect", action="store_true", help="Skip face detection.")
+    parser.add_argument("--method", type=str, help="The method to detect faces: mtcnn or dlib", default="mtcnn")
 
     # encode
     parser.add_argument("--isNew", action="store_true", help="Encode new images.")
@@ -50,15 +57,12 @@ if __name__ == "__main__":
         if not args.target_image:
             print(f"No --target_image provided. Using default image: {TEST_IMAGES_PATH}/{default_image}")
         if not args.no_detect:
-            run_face_detector(default_image)
+            run_face_detector(default_image, args.method)
         else:
             print("Skipping face detection.")
         run_demo(class_code)
     elif args.benchmark:
-        if args.num_classes:
-            run_benchmark(args.num_classes)
-        else:
-            print("Please provide the number of classes using --num_classes 2")
+        run_benchmark(args.num_classes)
     elif args.encode:
         if not args.isNew:
             print("No --isNew provided. Meaning no new images exist in stage.")
