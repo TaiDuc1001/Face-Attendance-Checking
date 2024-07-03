@@ -10,19 +10,21 @@ from scripts_experiments.process_lfw import read_metadata
 
 import torch
 
-from PIL import Image
 from tqdm import tqdm
+import cv2
 
 def encodeWithOneModel(image_path, model_name, device):
-    model = model_dict[model_name]["model"].to(device)
+    model = model_dict[model_name]["model"]
     if model_name == "resnet":
-        img = Image.open(image_path)
-        face = mtcnn(img).to(device)
-        if face is not None:
-            face = face.unsqueeze(0)
-            embeddings = model(face).detach()
-        else:
-            embeddings = None
+        model = model.to(device)
+        img = cv2.imread(image_path)
+        # face = mtcnn(img).to(device)
+        # if face is not None:
+        face = torch.Tensor(img).to(device)
+        face = face.unsqueeze(0).permute(0, 3, 1, 2)
+        embeddings = model(face).detach()
+        # else:
+            # embeddings = None
     else:
         embeddings = [model(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]]
 
