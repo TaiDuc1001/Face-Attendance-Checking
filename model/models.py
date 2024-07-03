@@ -24,22 +24,22 @@ class Facenet512:
 alpha = 1
 # Models dict
 model_dict = {
-    "resnet": {
-        "model": ResnetModel().model,
-        "data_path": RESNET_DATA_PATH,
+    # "resnet": {
+    #     "model": ResnetModel().model,
+    #     "data_path": RESNET_DATA_PATH,
+    #     "alpha": alpha,
+    #     "gamma": 0.7,
+    # },
+    "VGG-Face": {
+        "model": VGGFaceModel().model,
+        "data_path": VGGFACE_DATA_PATH,
         "alpha": alpha,
-        "gamma": 0.7,
+        "gamma": 0.05,
     },
     "Facenet512": {
         "model": Facenet512().model,
         "data_path": FACENET512_DATA_PATH,
         "alpha": alpha,
         "gamma": 0.2,
-    },
-    "VGG-Face": {
-        "model": VGGFaceModel().model,
-        "data_path": VGGFACE_DATA_PATH,
-        "alpha": alpha,
-        "gamma": 0.05,
     }
 }
