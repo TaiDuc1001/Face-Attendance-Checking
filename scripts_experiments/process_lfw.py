@@ -7,9 +7,12 @@ sys.path.append(root_dir)
 from scripts.config import DATABASE_PATH, META_PATH
 import random
 import json
+import subprocess
 
 def download_lfw():
-    pass
+    subprocess.run(["wget", "http://vis-www.cs.umass.edu/lfw/lfw-deepfunneled.tgz"])
+    subprocess.run(["mv", "lfw-deepfunneled.tgz", DATABASE_PATH])
+    subprocess.run(["tar", "-xvzf", "lfw-deepfunneled.tgz"])
 
 def isName(path):
     return True if "0" not in os.listdir(path)[0] else False
