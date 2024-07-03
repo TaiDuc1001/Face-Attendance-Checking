@@ -17,28 +17,29 @@ class VGGFaceModel:
     def __init__(self):
         self.model = DeepFace.represent
 
-class ArcFaceModel:
+class Facenet512:
     def __init__(self):
         self.model = DeepFace.represent
 
+alpha = 1
 # Models dict
 model_dict = {
     "resnet": {
         "model": ResnetModel().model,
         "data_path": RESNET_DATA_PATH,
-        "alpha": 1,
-        "gamma": 0.35,
+        "alpha": alpha,
+        "gamma": 0.7,
     },
-    "ArcFace": {
-        "model": ArcFaceModel().model,
-        "data_path": ARCFACE_DATA_PATH,
-        "alpha": 0.9,
-        "gamma": 0.1,
+    "Facenet512": {
+        "model": Facenet512().model,
+        "data_path": FACENET512_DATA_PATH,
+        "alpha": alpha,
+        "gamma": 0.2,
     },
     "VGG-Face": {
         "model": VGGFaceModel().model,
         "data_path": VGGFACE_DATA_PATH,
-        "alpha": 0.8,
-        "gamma": 0.55,
+        "alpha": alpha,
+        "gamma": 0.05,
     }
 }
