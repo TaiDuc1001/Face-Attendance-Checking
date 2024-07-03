@@ -22,7 +22,6 @@ def isName(path):
 def gen_id(ids):
     id = random.choice(["SE", "SS"]) + str(random.randint(16, 20)*10000 + random.randint(0, 9999))
     if id in ids:
-        print(f"{id} already exists. Generating new ID...")
         return gen_id(ids)
     return id
 
@@ -71,8 +70,6 @@ if __name__ == "__main__":
         download_lfw()
 
     people_name = os.listdir(lfw_path)
-    num_people = len(people_name)
-    print(f"Number of people: {num_people}, isName: {isName(lfw_path)}")
     
     if isName(lfw_path):
         write_metadata(people_name=people_name, 
