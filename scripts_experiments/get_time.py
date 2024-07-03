@@ -10,8 +10,6 @@ from scripts.config import BENCHMARK_INFO_PATH, BENCHMARK_PATH
 import json
 from tqdm import tqdm
 import time
-import subprocess
-from functools import lru_cache 
 from facenet_pytorch import MTCNN, InceptionResnetV1
 
 
@@ -19,7 +17,6 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 with open(BENCHMARK_INFO_PATH, 'r') as f:
     data = json.load(f)
 
-@lru_cache(maxsize=128)
 def match_name(name):
     for student in data:
         if student["Name"] == name:
