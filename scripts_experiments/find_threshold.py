@@ -5,7 +5,7 @@ root_dir = os.path.join(script_dir, '..')
 sys.path.append(root_dir)
 
 from scripts.config import DATABASE_PATH, META_PATH, FEATURES_PATH
-from model.models import model_dict, mtcnn
+from model.models import model_dict
 from scripts_experiments.process_lfw import read_metadata
 
 import torch
@@ -60,13 +60,7 @@ def encode(lfw_path, codeList, model_name, device):
     print(f"Encoded {lfw_path} with {len(codeList)} people.")
     return data
 
-if __name__ == "__main__":
-    lfw_path = "lfw-deepfunneled"
-    data = read_metadata(os.path.join(META_PATH, f"{lfw_path}.json"))
-    device = findCuda()
-    
-    codeList = [data[i]["Student Code"] for i in range(len(data))]
-    
+def getEmbedData(lfw_path, codeList, model_dict, device):
     for model_name in model_dict:
         data = encode(lfw_path=lfw_path, 
                       codeList=codeList, 
@@ -76,3 +70,73 @@ if __name__ == "__main__":
         saveFeatures(lfw_path=lfw_path, 
                      model_name=model_name, 
                      data=data)
+
+def matchClassCode(class_code, data):
+    students = []
+    for i in range(len(data)):
+        if class_code in data[i]["Class Code"]:
+            students.append(data[i]["Student Code"])
+    return students
+
+# Feature of a student from one model
+def getTrueFeature(code, data_path):
+    data = torch.load(data_path)
+    features, codeList = data
+    index = codeList.index(code)
+    return features[index]
+
+# Features of students in a class from one model
+def getTrueFeatures(model_name, student_codes, data_name):
+    data_path = os.path.join(FEATURES_PATH, data_name, f"{model_name}.pt")
+    features = [getTrueFeature(code, data_path) for code in student_codes]
+    return features
+
+def calculateScore(pred, true_feature):
+    def calScore(y_pred, y_true):
+        return 0
+    scores = [calScore(pred, true_feature[i]) for i in range(len(true_feature))]
+    return sum(scores) / len(scores)
+
+def getPredCode(image_path, model_dict, data_name, student_codes, device):
+    pred_scores = []
+    class_scores = []
+    for model_name in model_dict:
+        gamma = model_dict[model_name]["gamma"]
+        pred = encodeWithOneModel(image_path, model_name, device)
+        true_features = getTrueFeatures(model_name, student_codes, data_name)
+        scores = []
+        for true_feature in true_features:
+            score = calculateScore(pred, true_feature)
+            scores.append(score)
+        class_scores.append([scores, gamma])
+    
+    for i in range(len(class_scores[0])):
+        score = 0
+        for j in range(len(class_scores)):
+            score += class_scores[j][0][i] * class_scores[j][1]
+        pred_scores.append(score)
+    
+    max_index = pred_scores.index(max(pred_scores))
+    return student_codes[max_index], pred_scores[max_index]
+    
+if __name__ == "__main__":
+    data_name = "lfw-deepfunneled"
+    data = read_metadata(os.path.join(META_PATH, f"{data_name}.json"))
+    device = findCuda()
+    
+    codeList = [data[i]["Student Code"] for i in range(len(data))]
+    getEmbedData(data_name, codeList, model_dict, device)
+
+    # class_code = "SE" + str(1900 + 1)
+    # num_correct = 0
+    # student_codes = matchClassCode(class_code, data)
+    
+    # for true_code in codeList:
+    #     student_path = os.path.join(DATABASE_PATH, data_name, true_code)
+    #     for image in os.listdir(student_path):
+    #         image_path = os.path.join(student_path, image)
+    #         pred_code, score = getPredCode(image_path, model_dict, data_name, student_codes, device)
+    #         if pred_code == true_code:
+    #             num_correct += 1
+    # accuracy = num_correct / len(codeList)
+    # print(f"Accuracy: {accuracy:.4f} -- Class: {class_code}")
