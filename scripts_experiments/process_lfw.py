@@ -12,8 +12,8 @@ import subprocess
 def download_lfw():
     subprocess.run(["wget", "http://vis-www.cs.umass.edu/lfw/lfw-deepfunneled.tgz"])
     if not os.path.exists(DATABASE_PATH):
-        os.makedirs(DATABASE_PATH)
-    subprocess.run(["mv", "lfw-deepfunneled.tgz", DATABASE_PATH])
+        os.mkdir(DATABASE_PATH)
+    subprocess.run(["mv", "lfw-deepfunneled.tgz", f"{DATABASE_PATH}/"])
     subprocess.run(["tar", "-xvzf", os.path.join(DATABASE_PATH, "lfw-deepfunneled.tgz"), "-C", DATABASE_PATH])
 
 def isName(path):
@@ -57,6 +57,8 @@ def write_metadata(people_name, data_name):
         data.append(info)
         ids.append(info["Student Code"])
 
+    if not os.path.exists(META_PATH):
+        os.mkdir(META_PATH)
     new_json = os.path.join(META_PATH, f"{data_name}.json")
     with open(new_json, "w") as f:
         json.dump(data, f, indent=4)
