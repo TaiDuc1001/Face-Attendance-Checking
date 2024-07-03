@@ -1,20 +1,9 @@
-# VSCODE
 .vscode
 __pycache__
-
-# Extracted-faces
 extracted-faces
-
-# Databases
 database
-benchmark
-
-# Stage folder
 stage
-
-# Test folder
-test
-
-# Features
+inference-images
 features
-benchmark-features
+faces
+meta
