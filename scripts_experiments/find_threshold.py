@@ -228,10 +228,11 @@ class FindThreshold:
             class_code = f"SE{1900 + (i//40)*40 + (i%40)}"
             student_codes = self.get_code_list_from_class_code(class_code)
             student_per_class = student_codes[:10] if isTesting else student_codes
-            for student in student_per_class:
+            loader = tqdm(student_per_class, desc=f"Class Code: {class_code}") if useLoader else student_per_class
+            for student in loader:
                 student_path = os.path.join(self.database_path, self.data_name, student)
-                loader = tqdm(os.listdir(student_path), desc=f"Processing {student}") if useLoader else os.listdir(student_path)
-                for image in loader:
+                # loader = tqdm(os.listdir(student_path), desc=f"Processing {student}") if useLoader else os.listdir(student_path)
+                for image in os.listdir(student_path):
                     image_path = os.path.join(student_path, image)
                     pred_code, score = self.get_pred_code(image_path, model_dict, student_codes)
                     status = pred_code == student
