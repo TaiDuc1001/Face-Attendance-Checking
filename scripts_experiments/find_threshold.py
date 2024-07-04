@@ -60,7 +60,8 @@ class FindThreshold:
             y_pred (Tensor): Predicted feature
             y_true (Tensor): True feature
         Return:
-            score (Tensor): Cosine similarity score
+            score_similarity (Tensor): Cosine similarity score
+            score_distance (Tensor): Euclidean distance score
         '''
         try:
             y_pred = y_pred.squeeze()
@@ -69,8 +70,9 @@ class FindThreshold:
             pass
         y_pred = torch.Tensor(y_pred).squeeze().to(self.device)
         y_true = torch.Tensor(y_true).squeeze().to(self.device)
-        score = torch.dot(y_pred, y_true) / (torch.norm(y_pred) * torch.norm(y_true))
-        return score
+        score_similarity = torch.dot(y_pred, y_true) / (torch.norm(y_pred) * torch.norm(y_true))
+        score_distance = torch.dist(y_pred, y_true)
+        return score_similarity, score_distance
     
     def get_score(self, pred, true_feature):
         '''
@@ -79,11 +81,13 @@ class FindThreshold:
             pred (Tensor): Predicted feature
             true_feature (List<Tensor>): List of true features of students in the class
         Return:
-            average_score (Tensor): Average cosine similarity score
+            avg_score_similarity (Tensor): Average cosine similarity score
+            avg_score_distance (Tensor): Average euclidean distance score
         '''
         scores = [self.calculate_score(pred, true_feature[i]) for i in range(len(true_feature))]
-        average_score = sum(scores) / len(scores)
-        return average_score
+        avg_score_similarity = sum([score[0] for score in scores]) / len(scores)
+        avg_score_distance = sum([score[1] for score in scores]) / len(scores)
+        return avg_score_similarity, avg_score_distance
 
     @lru_cache(maxsize=128)
     def get_indices(self, student_codes):
@@ -129,17 +133,21 @@ class FindThreshold:
             score_list_for_each_person (List<List<Tensor>>): List of scores for each student in the class
             true_code_list (List<String>): List of student codes in the class
         '''
-        score_list_for_each_person = []
+        score_similarity_list_for_each_person = []
+        score_distance_list_for_each_person = []
         for model_name in model_dict:
             pred_feat = self.encode_with_one_model(image_path, model_name)
             true_feature_list, true_code_list = self.get_true_features(os.path.join(self.features_path, self.data_name, f"{model_name}.pt"), tuple(student_codes))
-            score_list_for_each_person_each_model = []
+            score_similarity_list_for_each_person_each_model = []
+            score_distance_list_for_each_person_each_model = []
 
             for true_feature in (true_feature_list):
-                score = self.get_score(pred_feat, true_feature)
-                score_list_for_each_person_each_model.append(score)
-            score_list_for_each_person.append(score_list_for_each_person_each_model)
-        return score_list_for_each_person, true_code_list
+                score_similarity, score_distance = self.get_score(pred_feat, true_feature)
+                score_similarity_list_for_each_person_each_model.append(score_similarity)
+                score_distance_list_for_each_person_each_model.append(score_distance)
+            score_similarity_list_for_each_person.append(score_similarity_list_for_each_person_each_model)
+            score_distance_list_for_each_person.append(score_distance_list_for_each_person_each_model)
+        return score_similarity_list_for_each_person, score_distance_list_for_each_person, true_code_list
     
     def get_final_scores_per_input(self, score_list_for_each_person, model_dict):
         '''
@@ -191,27 +199,37 @@ class FindThreshold:
             pred_code (String): Predicted student code
             score (Tensor): Score of the prediction
         '''
-        score_list_for_each_person, trueCodeList = self.get_scores_per_input(image_path, model_dict, student_codes)
-        total_score_list_for_each_image = self.get_final_scores_per_input(score_list_for_each_person, model_dict)
-        max_idx = total_score_list_for_each_image.index(max(total_score_list_for_each_image))
-        return trueCodeList[max_idx], max(total_score_list_for_each_image)
+        score_similarity_list_for_each_person, score_distance_list_for_each_person, trueCodeList = self.get_scores_per_input(image_path, model_dict, student_codes)
+        total_score_similarity_list_for_each_image = self.get_final_scores_per_input(score_similarity_list_for_each_person, model_dict)
+        total_score_distance_list_for_each_image = self.get_final_scores_per_input(score_distance_list_for_each_person, model_dict)
+        max_idx_sim = total_score_similarity_list_for_each_image.index(max(total_score_similarity_list_for_each_image))
+        min_idx_dis = total_score_distance_list_for_each_image.index(min(total_score_distance_list_for_each_image))
+        return trueCodeList[max_idx_sim], trueCodeList[min_idx_dis], max(total_score_similarity_list_for_each_image), min(total_score_distance_list_for_each_image)
 
     def clear_score_file(self):
         '''
         Clear the score file
         '''
-        with open(self.score_path, "w") as f:
+        sim_path = self.score_path.split(".")[0] + "_sim" + ".txt"
+        dis_path = self.score_path.split(".")[0] + "_dis" + ".txt"
+        with open(self.sim_path, "w") as f:
+            f.write("")
+        with open(self.dis_path, "w") as f:
             f.write("")
 
-    def write_score(self, score, status):
+    def write_score(self, score_sim, score_dis, status_sim, status_dis):
         '''
         Write score to a file
         Args:
             score (Tensor): Score to write
             status (bool): Status of the prediction
         '''
-        with open(self.score_path, "a") as f:
-            f.write(f"{score},{int(status)}\n")
+        sim_path = self.score_path.split(".")[0] + "_sim" + ".txt"
+        dis_path = self.score_path.split(".")[0] + "_dis" + ".txt"
+        with open(sim_path, "a") as f:
+            f.write(f"{score_sim},{int(status_sim)}\n")
+        with open(dis_path, "a") as f:
+            f.write(f"{score_dis},{int(status_dis)}\n")
 
     def write_scores(self, num_classes, model_dict, isTesting=False, useLoader=True):
         '''
@@ -224,25 +242,27 @@ class FindThreshold:
         self.clear_score_file()
 
         for i in range(num_classes):
-            num_correct, num_images = 0, 0
+            num_correct_sim, num_correct_dis, num_images = 0, 0, 0
             class_code = f"SE{1900 + (i//40)*40 + (i%40)}"
             student_codes = self.get_code_list_from_class_code(class_code)
             student_per_class = student_codes[:10] if isTesting else student_codes
             loader = tqdm(student_per_class, desc=f"Class Code: {class_code}") if useLoader else student_per_class
             for student in loader:
                 student_path = os.path.join(self.database_path, self.data_name, student)
-                # loader = tqdm(os.listdir(student_path), desc=f"Processing {student}") if useLoader else os.listdir(student_path)
                 for image in os.listdir(student_path):
                     image_path = os.path.join(student_path, image)
-                    pred_code, score = self.get_pred_code(image_path, model_dict, student_codes)
-                    status = pred_code == student
-                    num_correct += 1 if status else 0
+                    pred_code_sim, pred_code_dis, score_sim, score_dis = self.get_pred_code(image_path, model_dict, student_codes)
+                    status_sim = pred_code_sim == student
+                    status_dis = pred_code_dis == student
+                    num_correct_sim += 1 if status_sim else 0
+                    num_correct_dis += 1 if status_dis else 0
                     num_images += 1
-                    self.write_score(score, status)
-            print(f"Num correct: {num_correct}/{num_images} -- Accuracy: {(num_correct / num_images):.4f} -- Class: {class_code}")
+                    self.write_score(score_sim, score_dis, status_sim, status_dis)
+            print(f"Sim: Num correct: {num_correct_sim}/{num_images} -- Accuracy: {(num_correct_sim / num_images):.4f} -- Class: {class_code}")
+            print(f"Dis: Num correct: {num_correct_dis}/{num_images} -- Accuracy: {(num_correct_dis / num_images):.4f} -- Class: {class_code}")
 
 
 if __name__ == "__main__":
     findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="final_scores.txt")
-    findThres.write_scores(num_classes=2, model_dict=model_dict, isTesting=True, useLoader=False)
+    findThres.write_scores(num_classes=2, model_dict=model_dict, isTesting=True, useLoader=True)
     
