@@ -67,8 +67,8 @@ class FindThreshold:
             y_true = y_true.squeeze()
         except:
             pass
-        y_pred = torch.Tensor(y_pred).squeeze()
-        y_true = torch.Tensor(y_true).squeeze()
+        y_pred = torch.Tensor(y_pred).squeeze().to(self.device)
+        y_true = torch.Tensor(y_true).squeeze().to(self.device)
         score = torch.dot(y_pred, y_true) / (torch.norm(y_pred) * torch.norm(y_true))
         return score
     
