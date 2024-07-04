@@ -9,134 +9,235 @@ from model.models import model_dict
 from scripts_experiments.process_lfw import read_metadata
 
 import torch
-
 from tqdm import tqdm
 import cv2
+from functools import lru_cache
 
-def encodeWithOneModel(image_path, model_name, device):
-    model = model_dict[model_name]["model"]
-    if model_name == "resnet":
-        model = model.to(device)
-        img = cv2.imread(image_path)
-        # face = mtcnn(img).to(device)
-        # if face is not None:
-        face = torch.Tensor(img).to(device)
-        face = face.unsqueeze(0).permute(0, 3, 1, 2)
-        embeddings = model(face).detach()
-        # else:
-            # embeddings = None
-    else:
-        embeddings = [model(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]]
+class FindThreshold:
+    def __init__(self, data_name, score_path):
+        self.data_name = data_name
+        self.score_path = score_path
+        self.data = read_metadata(os.path.join(META_PATH, f"{self.data_name}.json"))
+        self.device = self.get_cuda()
+        self.full_code_list = [self.data[i]["Student Code"] for i in range(len(self.data))]
 
-    return embeddings
-
-def saveFeatures(lfw_path, model_name, data):
-    parent = os.path.join(FEATURES_PATH, lfw_path)
-    if not os.path.exists(parent):
-        os.makedirs(parent)
-    data_path = os.path.join(parent, f"{model_name}.pt")
-    torch.save(data, data_path)
-    print(f"Saved {model_name} features to {data_path}")
-
-def findCuda():
-    if torch.cuda.is_available():
-        if torch.cuda.device_count() > 1:
-            print("GPUs detected.")
-            return "0,1"
+    def get_cuda(self):
+        '''
+        Get cuda status. Print status
+        Return:
+            device (String): Device name
+        '''
+        if torch.cuda.is_available():
+            if torch.cuda.device_count() > 1:
+                print("GPUs detected.")
+                return "0,1"
+            else:
+                print("Found GPU.")
+                return "cuda"
         else:
-            print("Found GPU.")
-            return "cuda"
-    else:
-        print("No GPU detected. Using CPU")
-        return "cpu"
+            print("No GPU detected. Using CPU")
+            return "cpu"
 
-def encode(lfw_path, codeList, model_name, device):
-    features = []
-    for code in tqdm(codeList, desc=f"Encoding {lfw_path} with {model_name}"):
-        person_path = os.path.join(DATABASE_PATH, lfw_path, code)
-        feature = [encodeWithOneModel(os.path.join(person_path, image), model_name, device) for image in os.listdir(person_path)]
-        features.append(feature)
-    data = [features, codeList]
-    print(f"Encoded {lfw_path} with {len(codeList)} people.")
-    return data
+    def get_code_list_from_class_code(self, class_code):
+        '''
+        Args:
+            class_code (String): Class code of the students
+        Return:
+            students List<String>: List of student codes in the class
+        '''
+        students = []
+        for i in range(len(self.data)):
+            if class_code in self.data[i]["Class Code"]:
+                students.append(self.data[i]["Student Code"])
+        return students
 
-def getEmbedData(lfw_path, codeList, model_dict, device):
-    for model_name in model_dict:
-        data = encode(lfw_path=lfw_path, 
-                      codeList=codeList, 
-                      model_name=model_name, 
-                      device=device)
-        
-        saveFeatures(lfw_path=lfw_path, 
-                     model_name=model_name, 
-                     data=data)
-
-def matchClassCode(class_code, data):
-    students = []
-    for i in range(len(data)):
-        if class_code in data[i]["Class Code"]:
-            students.append(data[i]["Student Code"])
-    return students
-
-# Feature of a student from one model
-def getTrueFeature(code, data_path):
-    data = torch.load(data_path)
-    features, codeList = data
-    index = codeList.index(code)
-    return features[index]
-
-# Features of students in a class from one model
-def getTrueFeatures(model_name, student_codes, data_name):
-    data_path = os.path.join(FEATURES_PATH, data_name, f"{model_name}.pt")
-    features = [getTrueFeature(code, data_path) for code in student_codes]
-    return features
-
-def calculateScore(pred, true_feature):
-    def calScore(y_pred, y_true):
-        return 0
-    scores = [calScore(pred, true_feature[i]) for i in range(len(true_feature))]
-    return sum(scores) / len(scores)
-
-def getPredCode(image_path, model_dict, data_name, student_codes, device):
-    pred_scores = []
-    class_scores = []
-    for model_name in model_dict:
-        gamma = model_dict[model_name]["gamma"]
-        pred = encodeWithOneModel(image_path, model_name, device)
-        true_features = getTrueFeatures(model_name, student_codes, data_name)
-        scores = []
-        for true_feature in true_features:
-            score = calculateScore(pred, true_feature)
-            scores.append(score)
-        class_scores.append([scores, gamma])
+    def calculate_score(self, y_pred, y_true):
+        '''
+        Args:
+            y_pred (Tensor): Predicted feature
+            y_true (Tensor): True feature
+        Return:
+            score (Tensor): Cosine similarity score
+        '''
+        try:
+            y_pred = y_pred.squeeze()
+            y_true = y_true.squeeze()
+        except:
+            pass
+        y_pred = torch.Tensor(y_pred).squeeze()
+        y_true = torch.Tensor(y_true).squeeze()
+        score = torch.dot(y_pred, y_true) / (torch.norm(y_pred) * torch.norm(y_true))
+        return score
     
-    for i in range(len(class_scores[0])):
-        score = 0
-        for j in range(len(class_scores)):
-            score += class_scores[j][0][i] * class_scores[j][1]
-        pred_scores.append(score)
+    def get_score(self, pred, true_feature):
+        '''
+        Get score between an input (current image) and a student within that class.
+        Args:
+            pred (Tensor): Predicted feature
+            true_feature (List<Tensor>): List of true features of students in the class
+        Return:
+            average_score (Tensor): Average cosine similarity score
+        '''
+        scores = [self.calculate_score(pred, true_feature[i]) for i in range(len(true_feature))]
+        average_score = sum(scores) / len(scores)
+        return average_score
+
+    @lru_cache(maxsize=128)
+    def get_indices(self, student_codes):
+        '''
+        Get indices of students in class from the full list of student codes
+        Args:
+            student_codes (List<String>): List of student codes in the class
+        Return:
+            true_code_list (List<int>): List of indices of students in the class, aka true code list
+        '''
+        true_code_list = []
+        for student in student_codes:
+            for i, _id in enumerate(self.full_code_list):
+                if student == _id:
+                    true_code_list.append(i)
+        return true_code_list
+
+    @lru_cache(maxsize=128)
+    def get_true_features(self, data_path, student_codes):
+        '''
+        Get true features of students in the class
+        Args:
+            data_path (String): Path to the data file
+            student_codes (List<String>): List of student codes in the class
+        Return:
+            true_feature_list (List<Tensor>): List of true features of students in the class
+            true_code_list (List<String>): List of student codes in the class
+        '''
+        data = torch.load(data_path)
+        true_feature_list = data[0]
+        true_feature_list = [true_feature_list[i] for i in self.get_indices(tuple(student_codes))]
+        true_code_list = [self.full_code_list[i] for i in self.get_indices(tuple(student_codes))]
+        return true_feature_list, true_code_list
+
+    def get_scores_per_input(self, image_path, model_dict, student_codes):
+        '''
+        Get scores for each student in the class (input -> student)
+        Args:
+            image_path (String): Path to the image
+            model_dict (Dict): Dictionary of models
+            student_codes (List<String>): List of student codes in the class
+        Return:
+            score_list_for_each_person (List<List<Tensor>>): List of scores for each student in the class
+            true_code_list (List<String>): List of student codes in the class
+        '''
+        score_list_for_each_person = []
+        for model_name in model_dict:
+            pred_feat = self.encode_with_one_model(image_path, model_name)
+            true_feature_list, true_code_list = self.get_true_features(os.path.join(FEATURES_PATH, self.data_name, f"{model_name}.pt"), tuple(student_codes))
+            score_list_for_each_person_each_model = []
+
+            for true_feature in (true_feature_list):
+                score = self.get_score(pred_feat, true_feature)
+                score_list_for_each_person_each_model.append(score)
+            score_list_for_each_person.append(score_list_for_each_person_each_model)
+        return score_list_for_each_person, true_code_list
     
-    max_index = pred_scores.index(max(pred_scores))
-    return student_codes[max_index], pred_scores[max_index]
+    def get_final_scores_per_input(self, score_list_for_each_person, model_dict):
+        '''
+        Get final scores for each student in the class (input -> student)
+        Args:
+            score_list_for_each_person (List<List<Tensor>>): List of scores for each student in the class
+            model_dict (Dict): Dictionary of models
+        Return:
+            total_score_list_for_each_image (List<Tensor>): List of final scores for each student in the class
+        '''
+        total_score_list_for_each_image = []
+        number_of_person = len(score_list_for_each_person[0])
+        number_of_model = len(score_list_for_each_person)
+        for i in range(number_of_person):
+            total_score_for_each_person = 0
+            for j in range(number_of_model):
+                total_score_for_each_person += score_list_for_each_person[j][i] * model_dict[list(model_dict.keys())[j]]["gamma"]
+            total_score_list_for_each_image.append(total_score_for_each_person)
+        return total_score_list_for_each_image
     
+    def encode_with_one_model(self, image_path, model_name):
+        '''
+        Encode an image with a model
+        Args:
+            image_path (String): Path to the image
+            model_name (String): Name of the model
+        Return:
+            embeddings (Tensor): Encoded feature
+        '''
+        model = model_dict[model_name]["model"]
+        if model_name == "resnet":
+            model = model.to(self.device)
+            img = cv2.imread(image_path)
+            face = torch.Tensor(img).to(self.device)
+            face = face.unsqueeze(0).permute(0, 3, 1, 2)
+            embeddings = model(face).detach()
+        else:
+            embeddings = [model(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]]
+        return embeddings
+
+    def get_pred_code(self, image_path, model_dict, student_codes):
+        '''
+        Get predicted code for the input image
+        Args:
+            image_path (String): Path to the image
+            model_dict (Dict): Dictionary of models
+            student_codes (List<String>): List of student codes in the class
+        Return:
+            pred_code (String): Predicted student code
+            score (Tensor): Score of the prediction
+        '''
+        score_list_for_each_person, trueCodeList = self.get_scores_per_input(image_path, model_dict, student_codes)
+        total_score_list_for_each_image = self.get_final_scores_per_input(score_list_for_each_person, model_dict)
+        max_idx = total_score_list_for_each_image.index(max(total_score_list_for_each_image))
+        return trueCodeList[max_idx], max(total_score_list_for_each_image)
+
+    def clear_score_file(self):
+        '''
+        Clear the score file
+        '''
+        with open(self.score_path, "w") as f:
+            f.write("")
+
+    def write_score(self, score, status):
+        '''
+        Write score to a file
+        Args:
+            score (Tensor): Score to write
+            status (bool): Status of the prediction
+        '''
+        with open(self.score_path, "a") as f:
+            f.write(f"{score},{int(status)}\n")
+
+    def write_scores(self, num_classes, model_dict, isTesting=False):
+        '''
+        Write scores to a file
+        Args:
+            num_classes (int): Number of classes
+            model_dict (Dict): Dictionary of models
+        '''
+        # Clear the score file
+        self.clear_score_file()
+
+        for i in range(num_classes):
+            num_correct, num_images = 0, 0
+            class_code = f"SE{1900 + (i//40)*40 + (i%40)}"
+            student_codes = self.get_code_list_from_class_code(class_code)
+            student_per_class = student_codes[:10] if isTesting else student_codes
+            for student in student_per_class:
+                student_path = os.path.join(DATABASE_PATH, self.data_name, student)
+                for image in tqdm(os.listdir(student_path), desc=f"Processing {student}"):
+                    image_path = os.path.join(student_path, image)
+                    pred_code, score = self.get_pred_code(image_path, model_dict, student_codes)
+                    status = pred_code == student
+                    num_correct += 1 if status else 0
+                    num_images += 1
+                    self.write_score(score, status)
+            print(f"Num correct: {num_correct}/{num_images} -- Accuracy: {(num_correct / num_images):.4f} -- Class: {class_code}")
+
+
 if __name__ == "__main__":
-    data_name = "lfw-deepfunneled"
-    data = read_metadata(os.path.join(META_PATH, f"{data_name}.json"))
-    device = findCuda()
+    findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="final_scores.txt")
+    findThres.write_scores(num_classes=2, model_dict=model_dict, isTesting=True)
     
-    codeList = [data[i]["Student Code"] for i in range(len(data))]
-    getEmbedData(data_name, codeList, model_dict, device)
-
-    # class_code = "SE" + str(1900 + 1)
-    # num_correct = 0
-    # student_codes = matchClassCode(class_code, data)
-    
-    # for true_code in codeList:
-    #     student_path = os.path.join(DATABASE_PATH, data_name, true_code)
-    #     for image in os.listdir(student_path):
-    #         image_path = os.path.join(student_path, image)
-    #         pred_code, score = getPredCode(image_path, model_dict, data_name, student_codes, device)
-    #         if pred_code == true_code:
-    #             num_correct += 1
-    # accuracy = num_correct / len(codeList)
-    # print(f"Accuracy: {accuracy:.4f} -- Class: {class_code}")
