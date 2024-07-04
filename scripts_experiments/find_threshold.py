@@ -213,7 +213,7 @@ class FindThreshold:
         with open(self.score_path, "a") as f:
             f.write(f"{score},{int(status)}\n")
 
-    def write_scores(self, num_classes, model_dict, isTesting=False):
+    def write_scores(self, num_classes, model_dict, isTesting=False, useLoader=True):
         '''
         Write scores to a file
         Args:
@@ -230,7 +230,8 @@ class FindThreshold:
             student_per_class = student_codes[:10] if isTesting else student_codes
             for student in student_per_class:
                 student_path = os.path.join(self.database_path, self.data_name, student)
-                for image in tqdm(os.listdir(student_path), desc=f"Processing {student}"):
+                loader = tqdm(os.listdir(student_path), desc=f"Processing {student}") if useLoader else os.listdir(student_path)
+                for image in loader:
                     image_path = os.path.join(student_path, image)
                     pred_code, score = self.get_pred_code(image_path, model_dict, student_codes)
                     status = pred_code == student
@@ -242,5 +243,5 @@ class FindThreshold:
 
 if __name__ == "__main__":
     findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="final_scores.txt")
-    findThres.write_scores(num_classes=2, model_dict=model_dict, isTesting=True)
+    findThres.write_scores(num_classes=2, model_dict=model_dict, isTesting=True, useLoader=False)
     
