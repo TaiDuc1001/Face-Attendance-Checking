@@ -23,6 +23,17 @@ class FindThreshold:
         self.data = read_metadata(os.path.join(self.meta_path, f"{self.data_name}.json"))
         self.device = self.get_cuda()
         self.full_code_list = [self.data[i]["Student Code"] for i in range(len(self.data))]
+        self.last_class_code = self.get_final_class_code()
+
+    def get_final_class_code(self):
+        '''
+        Get final class code
+        Return:
+            digits (int): Digits of the final class code
+        '''
+        last_code = self.data[-1]["Class Code"][0]
+        digits = int(last_code[2:])
+        return digits + 1
 
     def get_cuda(self):
         '''
@@ -212,9 +223,9 @@ class FindThreshold:
         '''
         sim_path = self.score_path.split(".")[0] + "_sim" + ".txt"
         dis_path = self.score_path.split(".")[0] + "_dis" + ".txt"
-        with open(self.sim_path, "w") as f:
+        with open(sim_path, "w") as f:
             f.write("")
-        with open(self.dis_path, "w") as f:
+        with open(dis_path, "w") as f:
             f.write("")
 
     def write_score(self, score_sim, score_dis, status_sim, status_dis):
@@ -241,6 +252,8 @@ class FindThreshold:
         # Clear the score file
         self.clear_score_file()
 
+        num_classes = num_classes if num_classes is not None else self.last_class_code
+
         for i in range(num_classes):
             num_correct_sim, num_correct_dis, num_images = 0, 0, 0
             class_code = f"SE{1900 + (i//40)*40 + (i%40)}"
@@ -264,5 +277,5 @@ class FindThreshold:
 
 if __name__ == "__main__":
     findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="final_scores.txt")
-    findThres.write_scores(num_classes=2, model_dict=model_dict, isTesting=True, useLoader=True)
+    findThres.write_scores(num_classes=None, model_dict=model_dict, isTesting=True, useLoader=True)
     
