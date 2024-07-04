@@ -14,10 +14,13 @@ import cv2
 from functools import lru_cache
 
 class FindThreshold:
-    def __init__(self, data_name, score_path):
+    def __init__(self, data_name, score_path, meta_path=META_PATH, features_path=FEATURES_PATH, database_path=DATABASE_PATH):
         self.data_name = data_name
         self.score_path = score_path
-        self.data = read_metadata(os.path.join(META_PATH, f"{self.data_name}.json"))
+        self.meta_path = meta_path
+        self.features_path = features_path
+        self.database_path = database_path
+        self.data = read_metadata(os.path.join(self.meta_path, f"{self.data_name}.json"))
         self.device = self.get_cuda()
         self.full_code_list = [self.data[i]["Student Code"] for i in range(len(self.data))]
 
@@ -129,7 +132,7 @@ class FindThreshold:
         score_list_for_each_person = []
         for model_name in model_dict:
             pred_feat = self.encode_with_one_model(image_path, model_name)
-            true_feature_list, true_code_list = self.get_true_features(os.path.join(FEATURES_PATH, self.data_name, f"{model_name}.pt"), tuple(student_codes))
+            true_feature_list, true_code_list = self.get_true_features(os.path.join(self.features_path, self.data_name, f"{model_name}.pt"), tuple(student_codes))
             score_list_for_each_person_each_model = []
 
             for true_feature in (true_feature_list):
@@ -226,7 +229,7 @@ class FindThreshold:
             student_codes = self.get_code_list_from_class_code(class_code)
             student_per_class = student_codes[:10] if isTesting else student_codes
             for student in student_per_class:
-                student_path = os.path.join(DATABASE_PATH, self.data_name, student)
+                student_path = os.path.join(self.database_path, self.data_name, student)
                 for image in tqdm(os.listdir(student_path), desc=f"Processing {student}"):
                     image_path = os.path.join(student_path, image)
                     pred_code, score = self.get_pred_code(image_path, model_dict, student_codes)
