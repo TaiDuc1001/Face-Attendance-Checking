@@ -270,22 +270,24 @@ class FindThreshold:
             num_correct_sim, num_correct_dis, num_images = 0, 0, 0
             class_code = f"SE{1900 + (i//40)*40 + (i%40)}"
             student_codes = self.get_code_list_from_class_code(class_code)
-            student_per_class = student_codes[:10] if isTesting else student_codes
-            loader = tqdm(student_per_class, desc=f"Class Code: {class_code}") if useLoader else student_per_class
-            for student in loader:
-                student_path = os.path.join(self.database_path, self.data_name, student)
-                for image in os.listdir(student_path):
-                    image_path = os.path.join(student_path, image)
-                    pred_code_sim, pred_code_dis, score_sim, score_dis = self.get_pred_code(image_path, model_dict, student_codes, option=option)
-                    status_sim = pred_code_sim == student
-                    status_dis = pred_code_dis == student
-                    num_correct_sim += 1 if status_sim else 0
-                    num_correct_dis += 1 if status_dis else 0
-                    num_images += 1
-                    self.write_score(score_sim, score_dis, status_sim, status_dis)
-            print(f"Sim: Num correct: {num_correct_sim}/{num_images} -- Accuracy: {(num_correct_sim / num_images):.4f} -- Class: {class_code}")
-            print(f"Dis: Num correct: {num_correct_dis}/{num_images} -- Accuracy: {(num_correct_dis / num_images):.4f} -- Class: {class_code}")
-
+            try:
+                student_per_class = student_codes[:10] if isTesting else student_codes
+                loader = tqdm(student_per_class, desc=f"Class Code: {class_code}") if useLoader else student_per_class
+                for student in loader:
+                    student_path = os.path.join(self.database_path, self.data_name, student)
+                    for image in os.listdir(student_path):
+                        image_path = os.path.join(student_path, image)
+                        pred_code_sim, pred_code_dis, score_sim, score_dis = self.get_pred_code(image_path, model_dict, student_codes, option=option)
+                        status_sim = pred_code_sim == student
+                        status_dis = pred_code_dis == student
+                        num_correct_sim += 1 if status_sim else 0
+                        num_correct_dis += 1 if status_dis else 0
+                        num_images += 1
+                        self.write_score(score_sim, score_dis, status_sim, status_dis)
+                print(f"Sim: Num correct: {num_correct_sim}/{num_images} -- Accuracy: {(num_correct_sim / num_images):.4f} -- Class: {class_code}")
+                print(f"Dis: Num correct: {num_correct_dis}/{num_images} -- Accuracy: {(num_correct_dis / num_images):.4f} -- Class: {class_code}")
+            except:
+                print(f"Error in class: {class_code}")
     def get_score_from_file(self):
         '''
         Get scores from a file
