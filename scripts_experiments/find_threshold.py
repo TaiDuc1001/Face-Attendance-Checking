@@ -91,7 +91,7 @@ class FindThreshold:
         score_distance = torch.dist(y_pred, y_true)
         return score_similarity, score_distance
     
-    def get_score(self, pred, true_feature):
+    def get_score(self, pred, true_feature, option="avg_after"):
         '''
         Get score between an input (current image) and a student within that class.
         Args:
@@ -101,9 +101,19 @@ class FindThreshold:
             avg_score_similarity (Tensor): Average cosine similarity score
             avg_score_distance (Tensor): Average euclidean distance score
         '''
-        scores = [self.calculate_score(pred, true_feature[i]) for i in range(len(true_feature))]
-        avg_score_similarity = sum([score[0] for score in scores]) / len(scores)
-        avg_score_distance = sum([score[1] for score in scores]) / len(scores)
+        if option == "avg_after":
+            scores = [self.calculate_score(pred, true_feature[i]) for i in range(len(true_feature))]
+            avg_score_similarity = sum([score[0] for score in scores]) / len(scores)
+            avg_score_distance = sum([score[1] for score in scores]) / len(scores)
+        elif option == "avg_before":
+            true_feature_tensors = [torch.tensor(f) if not isinstance(f, torch.Tensor) else f for f in true_feature]
+
+            # Now you can safely stack and calculate the mean
+            avg_feature = torch.mean(torch.stack(true_feature_tensors), dim=0)
+            avg_score_similarity, avg_score_distance = self.calculate_score(pred, avg_feature)
+        else:
+            raise ValueError("Option must be either 'avg_before' or 'avg_after'")
+        
         return avg_score_similarity, avg_score_distance
 
     @lru_cache(maxsize=128)
@@ -139,7 +149,7 @@ class FindThreshold:
         true_code_list = [self.full_code_list[i] for i in self.get_indices(tuple(student_codes))]
         return true_feature_list, true_code_list
 
-    def get_scores_per_input(self, image_path, model_dict, student_codes):
+    def get_scores_per_input(self, image_path, model_dict, student_codes, option):
         '''
         Get scores for each student in the class (input -> student)
         Args:
@@ -159,7 +169,7 @@ class FindThreshold:
             score_distance_list_for_each_person_each_model = []
 
             for true_feature in (true_feature_list):
-                score_similarity, score_distance = self.get_score(pred_feat, true_feature)
+                score_similarity, score_distance = self.get_score(pred_feat, true_feature, option=option)
                 score_similarity_list_for_each_person_each_model.append(score_similarity)
                 score_distance_list_for_each_person_each_model.append(score_distance)
             score_similarity_list_for_each_person.append(score_similarity_list_for_each_person_each_model)
@@ -205,7 +215,7 @@ class FindThreshold:
             embeddings = [model(image_path, model_name=model_name, enforce_detection=False)[0]["embedding"]]
         return embeddings
 
-    def get_pred_code(self, image_path, model_dict, student_codes):
+    def get_pred_code(self, image_path, model_dict, student_codes, option="avg_after"):
         '''
         Get predicted code for the input image
         Args:
@@ -216,7 +226,7 @@ class FindThreshold:
             pred_code (String): Predicted student code
             score (Tensor): Score of the prediction
         '''
-        score_similarity_list_for_each_person, score_distance_list_for_each_person, trueCodeList = self.get_scores_per_input(image_path, model_dict, student_codes)
+        score_similarity_list_for_each_person, score_distance_list_for_each_person, trueCodeList = self.get_scores_per_input(image_path, model_dict, student_codes, option=option)
         total_score_similarity_list_for_each_image = self.get_final_scores_per_input(score_similarity_list_for_each_person, model_dict)
         total_score_distance_list_for_each_image = self.get_final_scores_per_input(score_distance_list_for_each_person, model_dict)
         max_idx_sim = total_score_similarity_list_for_each_image.index(max(total_score_similarity_list_for_each_image))
@@ -244,7 +254,7 @@ class FindThreshold:
         with open(self.dis_path, "a") as f:
             f.write(f"{score_dis},{int(status_dis)}\n")
 
-    def write_scores(self, num_classes, model_dict, isTesting=False, useLoader=True):
+    def write_scores(self, num_classes, model_dict, option, isTesting=False, useLoader=True):
         '''
         Write scores to a file
         Args:
@@ -266,7 +276,7 @@ class FindThreshold:
                 student_path = os.path.join(self.database_path, self.data_name, student)
                 for image in os.listdir(student_path):
                     image_path = os.path.join(student_path, image)
-                    pred_code_sim, pred_code_dis, score_sim, score_dis = self.get_pred_code(image_path, model_dict, student_codes)
+                    pred_code_sim, pred_code_dis, score_sim, score_dis = self.get_pred_code(image_path, model_dict, student_codes, option=option)
                     status_sim = pred_code_sim == student
                     status_dis = pred_code_dis == student
                     num_correct_sim += 1 if status_sim else 0
@@ -366,10 +376,10 @@ class FindThreshold:
 
 
 if __name__ == "__main__":
-    findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="final_scores.txt")
-    # findThres.write_scores(num_classes=None, model_dict=model_dict, isTesting=True, useLoader=True)
-    sim_df, dis_df = findThres.read_scores_to_dataframe()
-    sim_df, dis_df, sim_thresholds, dis_thresholds = findThres.create_cases(sim_df, dis_df)
-    accuracy_sim = findThres.count_thres_one(sim_df, sim_thresholds)
-    accuracy_dis = findThres.count_thres_one(dis_df, dis_thresholds)
-    findThres.plot_score(accuracy_sim, accuracy_dis)
+    findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="test_scores.txt")
+    findThres.write_scores(num_classes=1, model_dict=model_dict, option="avg_before", isTesting=True, useLoader=True)
+    # sim_df, dis_df = findThres.read_scores_to_dataframe()
+    # sim_df, dis_df, sim_thresholds, dis_thresholds = findThres.create_cases(sim_df, dis_df)
+    # accuracy_sim = findThres.count_thres_one(sim_df, sim_thresholds)
+    # accuracy_dis = findThres.count_thres_one(dis_df, dis_thresholds)
+    # findThres.plot_score(accuracy_sim, accuracy_dis)
