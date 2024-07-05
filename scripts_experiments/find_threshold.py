@@ -39,7 +39,7 @@ class FindThreshold:
         '''
         last_code = self.data[-1]["Class Code"][0]
         digits = int(last_code[2:])
-        return digits + 1
+        return digits
 
     def get_cuda(self):
         '''
