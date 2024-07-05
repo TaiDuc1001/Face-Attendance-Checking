@@ -12,6 +12,10 @@ import torch
 from tqdm import tqdm
 import cv2
 from functools import lru_cache
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
 
 class FindThreshold:
     def __init__(self, data_name, score_path, meta_path=META_PATH, features_path=FEATURES_PATH, database_path=DATABASE_PATH):
@@ -24,6 +28,8 @@ class FindThreshold:
         self.device = self.get_cuda()
         self.full_code_list = [self.data[i]["Student Code"] for i in range(len(self.data))]
         self.last_class_code = self.get_final_class_code()
+        self.sim_path = self.score_path.split(".")[0] + "_sim" + ".txt"
+        self.dis_path = self.score_path.split(".")[0] + "_dis" + ".txt"
 
     def get_final_class_code(self):
         '''
@@ -221,11 +227,9 @@ class FindThreshold:
         '''
         Clear the score file
         '''
-        sim_path = self.score_path.split(".")[0] + "_sim" + ".txt"
-        dis_path = self.score_path.split(".")[0] + "_dis" + ".txt"
-        with open(sim_path, "w") as f:
+        with open(self.sim_path, "w") as f:
             f.write("")
-        with open(dis_path, "w") as f:
+        with open(self.dis_path, "w") as f:
             f.write("")
 
     def write_score(self, score_sim, score_dis, status_sim, status_dis):
@@ -235,11 +239,9 @@ class FindThreshold:
             score (Tensor): Score to write
             status (bool): Status of the prediction
         '''
-        sim_path = self.score_path.split(".")[0] + "_sim" + ".txt"
-        dis_path = self.score_path.split(".")[0] + "_dis" + ".txt"
-        with open(sim_path, "a") as f:
+        with open(self.sim_path, "a") as f:
             f.write(f"{score_sim},{int(status_sim)}\n")
-        with open(dis_path, "a") as f:
+        with open(self.dis_path, "a") as f:
             f.write(f"{score_dis},{int(status_dis)}\n")
 
     def write_scores(self, num_classes, model_dict, isTesting=False, useLoader=True):
@@ -274,8 +276,100 @@ class FindThreshold:
             print(f"Sim: Num correct: {num_correct_sim}/{num_images} -- Accuracy: {(num_correct_sim / num_images):.4f} -- Class: {class_code}")
             print(f"Dis: Num correct: {num_correct_dis}/{num_images} -- Accuracy: {(num_correct_dis / num_images):.4f} -- Class: {class_code}")
 
+    def get_score_from_file(self):
+        '''
+        Get scores from a file
+        Return:
+            scores_sim (List<(float, int)>): List of scores and status of the prediction (similarity)
+            scores_dis (List<(float, int)>): List of scores and status of the prediction (distance)
+        '''
+        def read_score(score_path):
+            with open(score_path, "r") as f:
+                lines = f.readlines()
+            scores = [(float(line.split(",")[0]), int(line.split(",")[1])) for line in lines]
+            return scores
+        
+        scores_sim = read_score(self.sim_path)
+        scores_dis = read_score(self.dis_path)
+        return scores_sim, scores_dis
+
+    def read_scores_to_dataframe(self):
+        '''
+        Read scores from a file to a DataFrame
+        Return:
+            sim_df (DataFrame): DataFrame containing similarity scores
+            dis_df (DataFrame): DataFrame containing distance scores
+        '''
+        sim_df = pd.read_csv(self.sim_path, header=None, names=['score', 'status'])
+        dis_df = pd.read_csv(self.dis_path, header=None, names=['score', 'status'])
+        return sim_df, dis_df
+
+    def count_thres_one(self, df, thresholds):
+        '''
+        Read the DataFrame and return the number of lines where 'thres-0.0' value is 1.
+        Args:
+            df (DataFrame): The DataFrame to process.
+        Return:
+            accuracies (List<float>): List of accuracies for each threshold value.
+        '''
+        accuracies = []
+        for thres in thresholds:
+            count = df[df[f'thres-{thres}'] == 1].shape[0]
+            accuracy = count / df.shape[0]
+            accuracies.append(round(accuracy, 4))
+        accuracy_df = pd.DataFrame({'threshold': thresholds, 'accuracy': accuracies})
+        return accuracy_df
+    
+    def create_cases(self, sim_df, dis_df):
+        '''
+        Create cases for each threshold value.
+        Args:
+            sim_df (DataFrame): The DataFrame to process.
+        Return:
+            sim_df (DataFrame): The DataFrame with the 'thres-x' columns added.
+        '''
+        sim_thresholds, dis_thresholds = [], []
+        sim_thresholds.extend([(0.01 * i + 6*0.1) for i in range(20)])
+        sim_thresholds.extend([(0.005 * i + 8*0.1) for i in range(20)])
+        sim_thresholds = [round(thres, 2) for thres in sim_thresholds]
+
+        dis_thresholds.extend([(i*0.1 + 3) for i in range(2*10+1)])
+        for thres in sim_thresholds:
+            sim_df[f'thres-{thres}'] = np.where((sim_df['score'] > thres) & (sim_df['status'] == 1), 1, 0)
+        for thres in dis_thresholds:
+            dis_df[f'thres-{thres}'] = np.where((dis_df['score'] < thres) & (dis_df['status'] == 1), 1, 0)
+        return sim_df, dis_df, sim_thresholds, dis_thresholds
+
+    def plot_score(self, accuracy_sim, accuracy_dis):
+        '''
+        Plot the accuracy scores for different threshold values.
+        Args:
+            accuracy_df (DataFrame): DataFrame containing threshold values and corresponding accuracies.
+        '''
+        fig, axs = plt.subplots(1, 2, figsize=(15, 6))  # Create 1 row, 2 columns subplot structure
+
+        # Plot for similarity scores
+        sns.lineplot(data=accuracy_sim, x='threshold', y='accuracy', ax=axs[0], color='green')
+        axs[0].set_title('Accuracy vs. Threshold (Similarity)')
+        axs[0].set_xlabel('Threshold')
+        axs[0].set_ylabel('Accuracy')
+        axs[0].grid()
+
+        # Plot for dissimilarity scores
+        sns.lineplot(data=accuracy_dis, x='threshold', y='accuracy', ax=axs[1], color='red')
+        axs[1].set_title('Accuracy vs. Threshold (Distance)')
+        axs[1].set_xlabel('Threshold')
+        axs[1].set_ylabel('Accuracy')
+        axs[1].grid()
+
+        plt.show()
+
 
 if __name__ == "__main__":
     findThres = FindThreshold(data_name="lfw-deepfunneled", score_path="final_scores.txt")
-    findThres.write_scores(num_classes=None, model_dict=model_dict, isTesting=True, useLoader=True)
-    
+    # findThres.write_scores(num_classes=None, model_dict=model_dict, isTesting=True, useLoader=True)
+    sim_df, dis_df = findThres.read_scores_to_dataframe()
+    sim_df, dis_df, sim_thresholds, dis_thresholds = findThres.create_cases(sim_df, dis_df)
+    accuracy_sim = findThres.count_thres_one(sim_df, sim_thresholds)
+    accuracy_dis = findThres.count_thres_one(dis_df, dis_thresholds)
+    findThres.plot_score(accuracy_sim, accuracy_dis)
